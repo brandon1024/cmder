@@ -39,12 +39,12 @@ func (i *noOpRunnableLifecycle) Destroy(context.Context, []string) error {
 //
 //  1. Root  [RunnableLifecycle] Initialize()
 //  2. Child [RunnableLifecycle] Initialize()
-//  3. Child [Eunnable] Run()
+//  3. Child [Runnable] Run()
 //  4. Child [RunnableLifecycle] Destroy()
 //  5. Root  [RunnableLifecycle] Destroy()
 //
 // If a command implements [RootCommand] but the first argument passed to the command doesn't match a recognized child
-// [Command] Name(), the Run() routine will be executed.
+// command Name(), the Run() routine will be executed.
 //
 // # Error Handling
 //
@@ -63,7 +63,6 @@ func (i *noOpRunnableLifecycle) Destroy(context.Context, []string) error {
 // # Execution Options
 //
 // Execute accepts one or more [ExecuteOption] options. You can provide these options to tweak the behaviour of Execute.
-// Without any options, Execute will use arguments from [os.Args] and an initialize a default (empty) [flag.FlagSet].
 //
 // # Flag Initialization
 //
@@ -71,7 +70,7 @@ func (i *noOpRunnableLifecycle) Destroy(context.Context, []string) error {
 // command-line flags. Each command/subcommand is given a unique [flag.FlagSet].
 //
 // If a command does not define help flags (-h, --help), Execute will register help flags and will display command usage
-// text to [HelpOutputWriter] if those flags are provided at the command line.
+// text to [UsageOutputWriter] if those flags are provided at the command line.
 func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 	// setup context
 	ctx, cancel := context.WithCancel(ctx)
@@ -113,7 +112,7 @@ func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 
 	// if help flag found, display help pages
 	if showHelp {
-		return RenderHelp(cmd)
+		return RenderUsage(cmd, ops.flags)
 	}
 
 	args := ops.flags.Args()

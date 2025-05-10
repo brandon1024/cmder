@@ -9,8 +9,8 @@ import (
 )
 
 func main() {
-	cmd := &ParentCommand{
-		subcommands: []cmder.Command{&ChildCommand{}},
+	cmd := &HelloCommand{
+		subcommands: []cmder.Command{&WorldCommand{}},
 	}
 
 	if err := cmder.Execute(context.Background(), cmd); err != nil {
