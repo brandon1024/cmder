@@ -17,7 +17,7 @@ help you get started.
 
 `cmder` takes a very opinionated approach to building command-line interfaces.
 The library will help you define, structure and execute your commands, but
-that's about it. `cmder` embraces simplicity. Sometimes, less is better.
+that's about it. `cmder` embraces simplicity because sometimes, less is better.
 
 To define a new commands, simply define a type that implements the `Command`
 interface. If you want your command to have additional behaviour like flags or
@@ -250,7 +250,6 @@ $ make
 
 ## Outstanding Items
 
-- [ ] Parse all arguments (recursively) before executing lifecycle commands
 - [ ] Finish usage rendering
 - [ ] Add special ExecuteOption for handling `--`
 - [ ] Allow interspersed flags for leaf commands (e.g. `eam apps get <id> -l`)

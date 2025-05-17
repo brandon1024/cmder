@@ -15,17 +15,6 @@ var (
 	ErrIllegalExecuteOptions = errors.New("illegal command execution option")
 )
 
-// A no-op implementation of [RunnableLifecycle] used internally by [Execute].
-type noOpRunnableLifecycle struct{}
-
-func (i *noOpRunnableLifecycle) Initialize(context.Context, []string) error {
-	return nil
-}
-
-func (i *noOpRunnableLifecycle) Destroy(context.Context, []string) error {
-	return nil
-}
-
 // Execute runs a [Command].
 //
 // # Execution Lifecycle
@@ -68,110 +57,132 @@ func (i *noOpRunnableLifecycle) Destroy(context.Context, []string) error {
 //
 // If the command also implements [FlagInitializer], InitializeFlags() will be invoked to register additional
 // command-line flags. Each command/subcommand is given a unique [flag.FlagSet].
-//
-// If a command does not define help flags (-h, --help), Execute will register help flags and will display command usage
-// text to [UsageOutputWriter] if those flags are provided at the command line.
 func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
-	// setup context
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	// do some checks
+	if cmd == nil {
+		return errors.Join(ErrIllegalCommandConfiguration, errors.New("command cannot be nil"))
+	}
 
 	// prepare executor options
 	ops := &ExecuteOptions{
-		args:  os.Args[1:],
-		flags: flag.NewFlagSet(cmd.Name(), flag.ContinueOnError),
+		args: os.Args[1:],
 	}
 	for _, f := range op {
 		f(ops)
 	}
 
-	// do some checks
-	if ops.flags == nil {
-		return errors.Join(
-			ErrIllegalExecuteOptions,
-			errors.New("command flag set cannot be nil"),
-		)
-	}
-
-	// initialize flags
-	if c, ok := cmd.(FlagInitializer); ok {
-		c.InitializeFlags(ops.flags)
-	}
-
-	// if no help flags are defined, register them here
-	var showHelp bool
-	if ops.flags.Lookup("help") == nil && ops.flags.Lookup("h") == nil {
-		ops.flags.BoolVar(&showHelp, "help", false, "show command help and usage text")
-		ops.flags.BoolVar(&showHelp, "h", false, "show command help and usage text")
-	}
-
-	// parse flags
-	if err := ops.flags.Parse(ops.args); err != nil {
+	// build a stack of command invocations
+	stack, err := buildCallStack(cmd, ops.args)
+	if err != nil {
 		return err
 	}
 
-	// if help flag found, display help pages
-	if showHelp {
-		return RenderUsage(cmd, ops.flags)
+	return execute(ctx, stack)
+}
+
+// execute traverses the command stack recursively executing the lifecycle routines at each level.
+func execute(ctx context.Context, stack []command) error {
+	if len(stack) == 0 {
+		return nil
 	}
 
-	args := ops.flags.Args()
+	// setup context
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	// if cmd has a lifecycle, use it, otherwise fallback to a no-op lifecycle
-	var lifecycle RunnableLifecycle = &noOpRunnableLifecycle{}
-	if l, ok := cmd.(RunnableLifecycle); ok {
-		lifecycle = l
-	}
+	this := stack[0]
 
-	// run command initialization
-	if err := lifecycle.Initialize(ctx, args); err != nil {
-		return err
-	}
-
-	if c, ok := cmd.(RootCommand); ok {
-		// if this is a root command, run appropriate subcommand if given
-		subcommands := collectSubcommands(c)
-
-		// if no args given, run this command
-		if len(args) == 0 {
-			if err := cmd.Run(ctx, args); err != nil {
-				return err
-			}
-		} else {
-			if sub, ok := subcommands[args[0]]; !ok {
-				// if first arg isn't a subcommand, run this command
-				if err := cmd.Run(ctx, args); err != nil {
-					return err
-				}
-			} else {
-				// else, run subcommand
-				if err := Execute(ctx, sub, WithArgs(args[1:])); err != nil {
-					return err
-				}
-			}
-		}
-	} else {
-		// if this is a leaf command, run it
-		if err := cmd.Run(ctx, args); err != nil {
+	// run init, if applicable
+	if l, ok := this.cmd.(RunnableLifecycle); ok {
+		if err := l.Initialize(ctx, this.fs.Args()); err != nil {
 			return err
 		}
 	}
 
-	// run command teardown
-	if err := lifecycle.Destroy(ctx, args); err != nil {
+	// if this is a leaf, run Run(), otherwise recurse
+	var err error
+	if len(stack) == 1 {
+		err = this.cmd.Run(ctx, this.fs.Args())
+	} else {
+		err = execute(ctx, stack[1:])
+	}
+
+	if err != nil {
 		return err
+	}
+
+	// run destroy, if applicable
+	if l, ok := this.cmd.(RunnableLifecycle); ok {
+		if err := l.Destroy(ctx, this.fs.Args()); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-// collectSubcommands collects the immediate subcommands of the given [RootCommand] into a map keyed by the command
-// [Command] Name().
-func collectSubcommands(cmd RootCommand) map[string]Command {
+// collectSubcommands collects the immediate subcommands of the given [Command] into a map keyed by the command
+// [Command] Name(). Returns an empty map if the command is not a [RootCommand].
+func collectSubcommands(cmd Command) map[string]Command {
 	subcommands := map[string]Command{}
-	for _, subcommand := range cmd.Subcommands() {
+
+	c, ok := cmd.(RootCommand)
+	if !ok {
+		return subcommands
+	}
+
+	for _, subcommand := range c.Subcommands() {
 		subcommands[subcommand.Name()] = subcommand
 	}
 
 	return subcommands
+}
+
+// An internal representation of a command or subcommand and it's state before execution.
+type command struct {
+	cmd Command
+	fs  *flag.FlagSet
+}
+
+// buildCallStack builds a slice representing the command call stack. The first element in the slice is the root
+// command and the last is the leaf command.
+func buildCallStack(cmd Command, args []string) ([]command, error) {
+	var stack []command
+
+	if cmd == nil {
+		return nil, errors.Join(ErrIllegalCommandConfiguration, errors.New("command cannot be nil"))
+	}
+
+	for cmd != nil {
+		this := command{
+			cmd: cmd,
+			fs:  flag.NewFlagSet(cmd.Name(), flag.ContinueOnError),
+		}
+
+		if c, ok := cmd.(FlagInitializer); ok {
+			c.InitializeFlags(this.fs)
+		}
+
+		if err := this.fs.Parse(args); err != nil {
+			return nil, err
+		}
+
+		args = this.fs.Args()
+
+		if len(args) == 0 {
+			// if no subcommand name given, stop here
+			cmd = nil
+		} else if sub, ok := collectSubcommands(cmd)[args[0]]; ok {
+			// if subcommand name given, continue
+			args = args[1:]
+			cmd = sub
+		} else {
+			// if arg given but it's not a subcommand name, stop here
+			cmd = nil
+		}
+
+		stack = append(stack, this)
+	}
+
+	return stack, nil
 }
