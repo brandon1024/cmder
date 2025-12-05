@@ -32,14 +32,14 @@ configure a different bind address with the '--http.bind-addr' option. You can c
 `
 
 const ServerCommandExamples = `
-  # start the webserver with default (generated) credentials on port 8080
-  $ server
+# start the webserver with default (generated) credentials on port 8080
+$ server
 
-  # start the webserver without auth and bind to loopback interface
-  $ server --http.no-auth --http.bind-addr 127.0.0.1:8080
+# start the webserver without auth and bind to loopback interface
+$ server --http.no-auth --http.bind-addr 127.0.0.1:8080
 
-  # start the webserver with credentials
-  $ server --http.auth-basic ${USERNAME}:${PASSWORD}
+# start the webserver with credentials
+$ server --http.auth-basic ${USERNAME}:${PASSWORD}
 `
 
 type ServerCommand struct {
@@ -76,9 +76,19 @@ type ServerCommand struct {
 
 	// If configured, basic auth is disabled.
 	noAuth bool
+
+	// If configured, show usage information and exit.
+	help bool
+
+	// Internal handle to the flagset. Used only to render usage information.
+	//
+	// See [cmder.RenderUsage].
+	fs *flag.FlagSet
 }
 
 func (c *ServerCommand) InitializeFlags(fs *flag.FlagSet) {
+	c.fs = fs
+
 	fs.StringVar(&c.addr, "http.bind-addr", ":8080", "bind address for the web server")
 	fs.DurationVar(&c.readTimeout, "http.read-timeout", time.Duration(0), "read timeout for requests")
 	fs.DurationVar(&c.writeTimeout, "http.write-timeout", time.Duration(0), "write timeout for responses")
@@ -172,7 +182,7 @@ func main() {
 	defer cancel()
 
 	if err := cmder.Execute(ctx, cmd); err != nil {
-		fmt.Printf("unexpected error occurred: %v", err)
+		fmt.Printf("unexpected error occurred: %v\n", err)
 		os.Exit(1)
 	}
 }

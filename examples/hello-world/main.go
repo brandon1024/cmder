@@ -14,7 +14,7 @@ func main() {
 	}
 
 	if err := cmder.Execute(context.Background(), cmd); err != nil {
-		fmt.Printf("unexpected error occurred: %v", err)
+		fmt.Printf("unexpected error occurred: %v\n", err)
 		os.Exit(1)
 	}
 }

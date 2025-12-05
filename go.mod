@@ -2,7 +2,7 @@ module github.com/brandon1024/cmder
 
 go 1.23.0
 
-toolchain go1.24.2
+toolchain go1.25.5
 
 tool (
 	golang.org/x/tools/cmd/goimports

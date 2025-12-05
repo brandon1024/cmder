@@ -9,10 +9,10 @@ import (
 
 var (
 	// Returned when a [Command] provided to [Execute] is illegal.
-	ErrIllegalCommandConfiguration = errors.New("illegal command configuration")
+	ErrIllegalCommandConfiguration = errors.New("cmder: illegal command configuration")
 
 	// Returned when an [ExecuteOption] provided to [Execute] is illegal.
-	ErrIllegalExecuteOptions = errors.New("illegal command execution option")
+	ErrIllegalExecuteOptions = errors.New("cmder: illegal command execution option")
 )
 
 // Execute runs a [Command].
@@ -38,8 +38,8 @@ var (
 // # Error Handling
 //
 // Whenever a lifecycle routine (Initialize(), Run(), Destroy()) returns a non-nil error, execution is aborted
-// immediately and the error is returned. For example, returning an error from Run() will prevent execution of Destroy()
-// of the current command and any parents.
+// immediately and the error is returned at once. For example, returning an error from Run() will prevent execution of
+// Destroy() of the current command and any parents.
 //
 // Execute may return [ErrIllegalCommandConfiguration] or [ErrIllegalExecuteOptions] if a command is misconfigured or
 // options are invalid.
@@ -56,11 +56,18 @@ var (
 // # Flag Initialization
 //
 // If the command also implements [FlagInitializer], InitializeFlags() will be invoked to register additional
-// command-line flags. Each command/subcommand is given a unique [flag.FlagSet].
+// command-line flags. Each command/subcommand is given a unique [flag.FlagSet]. Help flags ('-h', '--help') are
+// configured automatically and must not be set by the application.
+//
+// # Usage and Help Texts
+//
+// Whenever the user provides the '-h' or '--help' flag at the command line, [Execute] will display command usage and
+// exit. The format of the help text can be adjusted by configuring [UsageTemplate]. By default, usage information will
+// be written to stderr, but this can be adjusted by setting [UsageOutputWriter].
 func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 	// do some checks
 	if cmd == nil {
-		return errors.Join(ErrIllegalCommandConfiguration, errors.New("command cannot be nil"))
+		return errors.Join(ErrIllegalCommandConfiguration, errors.New("cmder: command cannot be nil"))
 	}
 
 	// prepare executor options
@@ -77,6 +84,11 @@ func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 		return err
 	}
 
+	// if help was requested, display and exit
+	if cmd, ok := helpRequested(stack); ok {
+		return usage(*cmd)
+	}
+
 	return execute(ctx, stack)
 }
 
@@ -90,58 +102,43 @@ func execute(ctx context.Context, stack []command) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	this := stack[0]
+	var (
+		this = stack[0]
+		args = this.fs.Args()
+		err  error
+	)
 
-	// run init, if applicable
-	if l, ok := this.cmd.(RunnableLifecycle); ok {
-		if err := l.Initialize(ctx, this.fs.Args()); err != nil {
-			return err
-		}
+	// run init (if applicable)
+	if err := this.initializeFn(ctx, args); err != nil {
+		return err
 	}
 
 	// if this is a leaf, run Run(), otherwise recurse
-	var err error
 	if len(stack) == 1 {
-		err = this.cmd.Run(ctx, this.fs.Args())
+		err = this.Run(ctx, args)
 	} else {
 		err = execute(ctx, stack[1:])
 	}
-
 	if err != nil {
 		return err
 	}
 
-	// run destroy, if applicable
-	if l, ok := this.cmd.(RunnableLifecycle); ok {
-		if err := l.Destroy(ctx, this.fs.Args()); err != nil {
-			return err
-		}
+	// run destroy (if applicable)
+	if err := this.destroyFn(ctx, args); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-// collectSubcommands collects the immediate subcommands of the given [Command] into a map keyed by the command
-// [Command] Name(). Returns an empty map if the command is not a [RootCommand].
-func collectSubcommands(cmd Command) map[string]Command {
-	subcommands := map[string]Command{}
-
-	c, ok := cmd.(RootCommand)
-	if !ok {
-		return subcommands
-	}
-
-	for _, subcommand := range c.Subcommands() {
-		subcommands[subcommand.Name()] = subcommand
-	}
-
-	return subcommands
-}
-
 // An internal representation of a command or subcommand and it's state before execution.
 type command struct {
-	cmd Command
-	fs  *flag.FlagSet
+	Command
+
+	fs           *flag.FlagSet
+	initializeFn func(context.Context, []string) error
+	destroyFn    func(context.Context, []string) error
+	showHelp     bool
 }
 
 // buildCallStack builds a slice representing the command call stack. The first element in the slice is the root
@@ -149,14 +146,21 @@ type command struct {
 func buildCallStack(cmd Command, args []string) ([]command, error) {
 	var stack []command
 
-	if cmd == nil {
-		return nil, errors.Join(ErrIllegalCommandConfiguration, errors.New("command cannot be nil"))
-	}
-
 	for cmd != nil {
 		this := command{
-			cmd: cmd,
-			fs:  flag.NewFlagSet(cmd.Name(), flag.ContinueOnError),
+			Command:      cmd,
+			fs:           flag.NewFlagSet(cmd.Name(), flag.ContinueOnError),
+			initializeFn: func(context.Context, []string) error { return nil },
+			destroyFn:    func(context.Context, []string) error { return nil },
+		}
+
+		// add help flags
+		this.fs.BoolVar(&this.showHelp, "h", false, "show command help and usage information")
+		this.fs.BoolVar(&this.showHelp, "help", false, "show command help and usage information")
+
+		if l, ok := cmd.(RunnableLifecycle); ok {
+			this.initializeFn = l.Initialize
+			this.destroyFn = l.Destroy
 		}
 
 		if c, ok := cmd.(FlagInitializer); ok {
@@ -185,4 +189,20 @@ func buildCallStack(cmd Command, args []string) ([]command, error) {
 	}
 
 	return stack, nil
+}
+
+// helpRequested traverses the command stack and returns whether help text was requested with '-h' or '--help' flags,
+// returning the leaf command from stack and true.
+func helpRequested(stack []command) (*command, bool) {
+	if len(stack) == 0 {
+		return nil, false
+	}
+
+	for _, cmd := range stack {
+		if cmd.showHelp {
+			return &stack[len(stack)-1], true
+		}
+	}
+
+	return nil, false
 }

@@ -248,12 +248,6 @@ To build the project and run tests:
 $ make
 ```
 
-## Outstanding Items
-
-- [ ] Finish usage rendering
-- [ ] Add special ExecuteOption for handling `--`
-- [ ] Allow interspersed flags for leaf commands (e.g. `eam apps get <id> -l`)
-
 ## License
 
 All software components herein are subject to the terms and conditions
