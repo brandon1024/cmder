@@ -34,7 +34,11 @@ func init() {
 
 // Usage is a simple usage function which prints usage information for the global [CommandLine].
 var Usage = func() {
-	fmt.Fprintf(CommandLine.Output(), "Usage of %s:\n", CommandLine.Name())
+	_, err := fmt.Fprintf(CommandLine.Output(), "Usage of %s:\n", CommandLine.Name())
+	if err != nil {
+		panic(err)
+	}
+
 	CommandLine.PrintDefaults()
 }
 
@@ -103,27 +107,45 @@ func (f *FlagSet) Init(name string, errorHandling ErrorHandling) {
 // configured with [NewFlagSet] or [FlagSet.SetOutput].
 func (f *FlagSet) PrintDefaults() {
 	f.VisitAll(func(flg *Flag) {
+		var err error
+
 		name, usage := UnquoteUsage(flg)
 
 		if len(flg.Name) == 1 {
-			fmt.Fprintf(f.Output(), "   -%s", flg.Name)
+			_, err = fmt.Fprintf(f.Output(), "   -%s", flg.Name)
 		} else {
-			fmt.Fprintf(f.Output(), "  --%s", flg.Name)
+			_, err = fmt.Fprintf(f.Output(), "  --%s", flg.Name)
+		}
+
+		if err != nil {
+			panic(err)
 		}
 
 		if len(name) > 0 {
-			fmt.Fprintf(f.Output(), " <%s>", name)
+			_, err = fmt.Fprintf(f.Output(), " <%s>", name)
+		}
+
+		if err != nil {
+			panic(err)
 		}
 
 		if len(flg.DefValue) > 0 {
 			if _, ok := flg.Value.(*stringT); ok {
-				fmt.Fprintf(f.Output(), " (default %q)", flg.DefValue)
+				_, err = fmt.Fprintf(f.Output(), " (default %q)", flg.DefValue)
 			} else {
-				fmt.Fprintf(f.Output(), " (default %s)", flg.DefValue)
+				_, err = fmt.Fprintf(f.Output(), " (default %s)", flg.DefValue)
 			}
 		}
 
-		fmt.Fprintf(f.Output(), "\n        %s\n", usage)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = fmt.Fprintf(f.Output(), "\n        %s\n", usage)
+
+		if err != nil {
+			panic(err)
+		}
 	})
 }
 
