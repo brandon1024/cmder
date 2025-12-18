@@ -2,11 +2,12 @@ package cmder
 
 import (
 	"bytes"
-	"flag"
 	"io"
 	"os"
 	"strings"
 	"text/template"
+
+	"github.com/brandon1024/cmder/flag"
 )
 
 // Text template for rendering command usage information in a format similar to that of the popular

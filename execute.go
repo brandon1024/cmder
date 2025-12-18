@@ -3,8 +3,9 @@ package cmder
 import (
 	"context"
 	"errors"
-	"flag"
 	"os"
+
+	"github.com/brandon1024/cmder/flag"
 )
 
 var (

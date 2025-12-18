@@ -2,10 +2,10 @@ package cmder_test
 
 import (
 	"context"
-	"flag"
 	"fmt"
 
 	"github.com/brandon1024/cmder"
+	"github.com/brandon1024/cmder/flag"
 )
 
 // === PARENT COMMAND ===
