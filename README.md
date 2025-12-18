@@ -19,9 +19,15 @@ help you get started.
 The library will help you define, structure and execute your commands, but
 that's about it. `cmder` embraces simplicity because sometimes, less is better.
 
-To define a new commands, simply define a type that implements the `Command`
+To define a new command, simply define a type that implements the `Command`
 interface. If you want your command to have additional behaviour like flags or
 subcommands, simply implement the appropriate interfaces.
+
+`cmder` also offers a [flag](flag/doc.go) package which is a drop-in replacement
+for the standard library package of the same name for parsing POSIX/GNU style
+flags.
+
+Here are some highlights:
 
 - Bring your own types. `cmder` doens't force you to use special `command`
   structs. As long as you implement our narrow interfaces, you're good to go!

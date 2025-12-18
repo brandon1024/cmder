@@ -7,7 +7,7 @@ started.
 cmder takes a very opinionated approach to building command-line interfaces. The library will help you define, structure
 and execute your commands, but that's about it. cmder embraces simplicity because sometimes, less is better.
 
-To define a new commands, simply define a type that implements the [Command] interface. If you want your command to have
+To define a new command, simply define a type that implements the [Command] interface. If you want your command to have
 additional behaviour like flags or subcommands, simply implement the appropriate interfaces.
 
   - Bring your own types. cmder doens't force you to use special command structs. As long as you implement our narrow
@@ -17,5 +17,7 @@ additional behaviour like flags or subcommands, simply implement the appropriate
   - We take great pride in our documentation. If you find anything unclear, please let us know so we can fix it.
 
 To get started, see [Command] and [Execute].
+
+For POSIX/GNU flag parsing, see package [flag].
 */
 package cmder
