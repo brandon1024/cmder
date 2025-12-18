@@ -77,9 +77,6 @@ type ServerCommand struct {
 	// If configured, basic auth is disabled.
 	noAuth bool
 
-	// If configured, show usage information and exit.
-	help bool
-
 	// Internal handle to the flagset. Used only to render usage information.
 	//
 	// See [cmder.RenderUsage].
