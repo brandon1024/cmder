@@ -33,7 +33,25 @@ Examples:
 	{{- println -}}
 	{{- println "Flags:" -}}
 	{{- range . -}}
-		{{- printf "  %-32s  %s%s\n" (printf "%s%s" (or (and (eq (len .Name) 1) " -") "--") .Name) .Usage (and .DefValue (printf " (default \"%s\")" .DefValue)) -}}
+		{{- $unquoted := unquote . -}}
+		{{- $name := (index $unquoted 0) -}}
+		{{- $usage := (index $unquoted 1) -}}
+
+		{{- if (eq (len .Name) 1) -}}
+			{{- printf "   -%s" .Name -}}
+		{{- else -}}
+			{{- printf "  --%s" .Name -}}
+		{{- end -}}
+
+		{{- if $name -}}
+			{{- printf " <%s>" $name -}}
+		{{- end -}}
+
+		{{- if .DefValue -}}
+			{{- printf " (default %s)" .DefValue -}}
+		{{- end -}}
+
+		{{- printf "\n        %s\n" $usage -}}
 	{{- end -}}
 {{- end -}}
 
@@ -42,8 +60,7 @@ Examples:
 	{{- printf "Use \"%s [command] --help\" for more information about a command.\n" .Command.Name -}}
 {{- end -}}`
 
-// Text template for rendering command usage information in a minimal format similar to that of the [flag] standard
-// library.
+// Text template for rendering command usage information in a minimal format similar to that of the [flag] library.
 const StdFlagUsageTemplate = `usage: {{ .Command.UsageLine }}
 {{ flagusage . }}`
 
@@ -61,6 +78,7 @@ func usage(cmd command) error {
 		"commands":  collectSubcommands,
 		"flags":     flags,
 		"flagusage": flagUsage,
+		"unquote":   unquote,
 		"lower":     strings.ToLower,
 		"upper":     strings.ToUpper,
 		"split":     strings.Split,
@@ -88,7 +106,7 @@ func flags(cmd command) []*flag.Flag {
 	return collected
 }
 
-// flagUsage dumps the flag usage as rendered by the stdlib.
+// flagUsage dumps the flag usage as rendered by the flag library.
 func flagUsage(cmd command) string {
 	out := cmd.fs.Output()
 	defer cmd.fs.SetOutput(out)
@@ -99,4 +117,10 @@ func flagUsage(cmd command) string {
 	cmd.fs.PrintDefaults()
 
 	return buf.String()
+}
+
+// unquote calls [flag.UnquoteUsage] for the given [flag.Flag].
+func unquote(flg *flag.Flag) []string {
+	name, usage := flag.UnquoteUsage(flg)
+	return []string{name, usage}
 }
