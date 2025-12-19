@@ -70,6 +70,17 @@ func TestFlagSet(t *testing.T) {
 				t.Fatalf("count var not updated with expected default value")
 			}
 		})
+
+		t.Run("should allow flag names with periods", func(t *testing.T) {
+			var addr string
+
+			fs := NewFlagSet("test", ContinueOnError)
+			fs.StringVar(&addr, "web.listen-address", ":8080", "bind `address` for the web server")
+
+			if addr != ":8080" {
+				t.Fatalf("addr var not updated with expected default value")
+			}
+		})
 	})
 
 	t.Run("Lookup", func(t *testing.T) {

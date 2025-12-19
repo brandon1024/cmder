@@ -324,10 +324,10 @@ func (f *FlagSet) Var(value Value, name string, usage string) {
 	}
 
 	invalid := strings.ContainsFunc(name, func(r rune) bool {
-		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '-'
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '-' && r != '.'
 	})
 	if invalid {
-		panic(fmt.Sprintf("flag '%s' has invalid name (must be alphanumeric and '-')", name))
+		panic(fmt.Sprintf("flag '%s' has invalid name (must be alphanumeric and any of '-.')", name))
 	}
 
 	if f.Lookup(name) != nil {
