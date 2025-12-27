@@ -126,16 +126,16 @@ type BaseCommand struct {
 	// The command name. See Name() in [Command].
 	CommandName string
 
-	// Optional function invoked by the default InitializeFlags() function. If nil, InitializeFlags() will do nothing.
+	// Optional function invoked by the default InitializeFlags() function.
 	InitFlagsFunc func(*flag.FlagSet)
 
-	// Optional function invoked by the default Initialize() function. If nil, Initialize() will return nil.
+	// Optional function invoked by the default Initialize() function.
 	InitFunc func(context.Context, []string) error
 
-	// Optional function invoked by the default Run() function. If nil, Run() will return nil.
+	// Optional function invoked by the default Run() function.
 	RunFunc func(context.Context, []string) error
 
-	// Optional function invoked by the default Destroy() function. If nil, Destroy() will return nil.
+	// Optional function invoked by the default Destroy() function.
 	DestroyFunc func(context.Context, []string) error
 
 	// Subcommands for this command, if applicable. See [RootCommand].

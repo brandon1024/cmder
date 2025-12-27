@@ -49,7 +49,8 @@ character, while a short flag has a name with a single character.
 	--count 12  // long integer value
 	--count=12  // long integer value with immediate value
 
-Multiple short flags may be "stuck" together.
+Short boolean flags may be combined into a single argument, and short flags accepting arguments may be "stuck" to the
+value:
 
 	-ac12       // equivalent to '-a -c 12'
 

@@ -47,7 +47,8 @@ var Usage = func() {
 // Unlike FlagSet in the standard library package, this FlagSet parses flags with POSIX/GNU semantics.
 //
 // [Flag] names must be unique within a FlagSet. An attempt to define a flag whose name is already in use will cause a
-// panic.
+// panic. Flag names must also be comprised of only alphanumeric characters, hyphens '-' (except at beginning or end of
+// name), and periods '.'
 type FlagSet struct {
 	// Usage is a function called when an error occurs while parsing flags. It is invoked directly after an error is
 	// encountered, but immediately before [FlagSet.Parse] returns the error or exits/panics (see [ErrorHandling]).
