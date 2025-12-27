@@ -557,6 +557,25 @@ func TestFlagSet(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		})
+
+		t.Run("should support shorthand flag aliasing", func(t *testing.T) {
+			var output string
+
+			fs := NewFlagSet("test", ContinueOnError)
+			fs.StringVar(&output, "output", "-", "output `file`")
+
+			flg := fs.Lookup("output")
+			fs.Var(flg.Value, "o", flg.Usage)
+
+			err := fs.Parse([]string{"--output=test.out", "-o", "test-1.out"})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if output != "test-1.out" {
+				t.Fatalf("output var not updated with expected value: %s", output)
+			}
+		})
 	})
 
 	t.Run("PrintDefaults", func(t *testing.T) {

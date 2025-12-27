@@ -2,8 +2,11 @@ package cmder
 
 import (
 	"bytes"
+	"cmp"
 	"io"
 	"os"
+	"reflect"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -33,25 +36,35 @@ Examples:
 	{{- println -}}
 	{{- println "Flags:" -}}
 	{{- range . -}}
-		{{- $unquoted := unquote . -}}
-		{{- $name := (index $unquoted 0) -}}
-		{{- $usage := (index $unquoted 1) -}}
+		{{- printf "  " -}}
 
-		{{- if (eq (len .Name) 1) -}}
-			{{- printf "   -%s" .Name -}}
-		{{- else -}}
-			{{- printf "  --%s" .Name -}}
+		{{- range $index, $flg := . -}}
+			{{- if (ne $index 0) -}}
+				{{- printf ", " -}}
+			{{- end -}}
+
+			{{- if (eq (len $flg.Name) 1) -}}
+				{{- printf "-%s" .Name -}}
+			{{- else -}}
+				{{- printf "--%s" .Name -}}
+			{{- end -}}
+
+			{{- $name := (index (unquote $flg) 0) -}}
+
+			{{- if (and $name (eq (len $flg.Name) 1)) -}}
+				{{- printf " <%s>" $name -}}
+			{{- else if $name -}}
+				{{- printf "=<%s>" $name -}}
+			{{- end -}}
 		{{- end -}}
 
-		{{- if $name -}}
-			{{- printf " <%s>" $name -}}
+		{{ if (index . 0).DefValue }}
+			{{- printf " (default %s)" (index . 0).DefValue -}}
 		{{- end -}}
 
-		{{- if .DefValue -}}
-			{{- printf " (default %s)" .DefValue -}}
-		{{- end -}}
+		{{- println -}}
 
-		{{- printf "\n        %s\n" $usage -}}
+		{{- printf "      %s\n" (index (unquote (index . 0)) 1) -}}
 	{{- end -}}
 {{- end -}}
 
@@ -95,18 +108,67 @@ func usage(cmd command) error {
 	return tmpl.Execute(UsageOutputWriter, cmd)
 }
 
-// collect a slice of flags of the given command.
-func flags(cmd command) []*flag.Flag {
+// flags organizes the flags of cmd and returns them.
+//
+// The flags of cmd are grouped by [flag.Value] equivalence. This allows flags to be grouped together in the rendered
+// usage text when two flags are aliases of each other. This is often the case for short flags which are aliases of
+// longer flags (e.g. '-a' is an alias of '--all').
+//
+//	-a <string>, --addr=<string>
+//	-s <string>, --serial-number=<string>
+//
+// The resulting map entries are keyed by the flag group name, which is the longest flag name in the group. The map
+// values are slices of (one or more) flags in the flag group, sorted by flag name length ('-a' before '--all').
+func flags(cmd command) map[string][]*flag.Flag {
 	var collected []*flag.Flag
 
 	cmd.fs.VisitAll(func(f *flag.Flag) {
 		collected = append(collected, f)
 	})
 
-	return collected
+	// sort flags by name length in descending order to ensure that keys in resulting map will use long names first
+	slices.SortFunc(collected, func(a, b *flag.Flag) int {
+		return cmp.Compare(len(b.Name), len(a.Name))
+	})
+
+	groups := map[string][]*flag.Flag{}
+
+	for len(collected) > 0 {
+		var flg *flag.Flag
+
+		// pop the head of the slice
+		flg, collected = collected[0], collected[1:]
+
+		// update groups
+		groups[flg.Name] = []*flag.Flag{flg}
+
+		// traverse the flags again and find (and remove) any which match flg
+		for i := len(collected) - 1; i >= 0; i-- {
+			other := collected[i]
+
+			// some value types are not comparable (like boolfunc)
+			canCompare := reflect.ValueOf(flg.Value).Comparable() && reflect.ValueOf(other.Value).Comparable()
+
+			if canCompare && flg.Value == other.Value {
+				groups[flg.Name] = append(groups[flg.Name], other)
+				collected = append(collected[:i], collected[i+1:]...)
+			}
+		}
+
+		// sort by length (then lexical order), this time ascending (-a before --all)
+		slices.SortFunc(groups[flg.Name], func(a, b *flag.Flag) int {
+			if c := cmp.Compare(len(a.Name), len(b.Name)); c != 0 {
+				return c
+			}
+
+			return cmp.Compare(a.Name, b.Name)
+		})
+	}
+
+	return groups
 }
 
-// flagUsage dumps the flag usage as rendered by the flag library.
+// flagUsage dumps the flag usage as rendered by the flag library. See [flag.FlagSet.PrintDefaults].
 func flagUsage(cmd command) string {
 	out := cmd.fs.Output()
 	defer cmd.fs.SetOutput(out)
