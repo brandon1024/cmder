@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/brandon1024/cmder"
+	"github.com/brandon1024/cmder/flag"
 )
 
 const ServerCommandUsageLine = `server [<options>...]`
@@ -76,16 +76,9 @@ type ServerCommand struct {
 
 	// If configured, basic auth is disabled.
 	noAuth bool
-
-	// Internal handle to the flagset. Used only to render usage information.
-	//
-	// See [cmder.RenderUsage].
-	fs *flag.FlagSet
 }
 
 func (c *ServerCommand) InitializeFlags(fs *flag.FlagSet) {
-	c.fs = fs
-
 	fs.StringVar(&c.addr, "http.bind-addr", ":8080", "bind address for the web server")
 	fs.DurationVar(&c.readTimeout, "http.read-timeout", time.Duration(0), "read timeout for requests")
 	fs.DurationVar(&c.writeTimeout, "http.write-timeout", time.Duration(0), "write timeout for responses")

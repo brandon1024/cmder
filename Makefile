@@ -3,6 +3,7 @@
 #
 .PHONY:
 all: fmt test
+	go build -o build ./...
 
 #
 # Format Target
