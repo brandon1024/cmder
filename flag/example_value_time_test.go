@@ -34,7 +34,7 @@ func (t *TimeVar) Get() any {
 
 // You can define custom types implementing [flag.Value] to handle different types of flags, like timestamps, IP
 // addresses, string maps or slices.
-func ExampleValue() {
+func ExampleValue_time() {
 	var since TimeVar
 
 	fs := flag.NewFlagSet("custom", flag.ContinueOnError)
@@ -49,7 +49,6 @@ func ExampleValue() {
 	}
 
 	fmt.Printf("since: %s\n", since.String())
-
 	// Output:
 	// since: 2025-01-01T00:00:00Z
 }
