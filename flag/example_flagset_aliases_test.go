@@ -29,7 +29,6 @@ func ExampleFlagSet() {
 
 	fmt.Printf("since: %s\n", since.String())
 	fmt.Printf("until: %s\n", until.String())
-
 	// Output:
 	// since: -12m0s
 	// until: 1m0s
