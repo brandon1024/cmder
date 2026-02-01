@@ -1,7 +1,7 @@
 package cmder
 
 import (
-	"github.com/brandon1024/cmder/flag"
+	"flag"
 )
 
 // FlagInitializer is an interface implemented by commands that need to register flags.

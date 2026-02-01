@@ -3,14 +3,16 @@ package cmder
 import (
 	"bytes"
 	"cmp"
+	"flag"
 	"io"
 	"os"
 	"reflect"
 	"slices"
 	"strings"
 	"text/template"
+	"time"
 
-	"github.com/brandon1024/cmder/flag"
+	"github.com/brandon1024/cmder/getopt"
 )
 
 // Text template for rendering command usage information in a format similar to that of the popular
@@ -123,7 +125,9 @@ func flags(cmd command) map[string][]*flag.Flag {
 	var collected []*flag.Flag
 
 	cmd.fs.VisitAll(func(f *flag.Flag) {
-		collected = append(collected, f)
+		if !isHiddenFlag(f) {
+			collected = append(collected, f)
+		}
 	})
 
 	// sort flags by name length in descending order to ensure that keys in resulting map will use long names first
@@ -183,6 +187,46 @@ func flagUsage(cmd command) string {
 
 // unquote calls [flag.UnquoteUsage] for the given [flag.Flag].
 func unquote(flg *flag.Flag) []string {
+	if isBoolFlag(flg) {
+		return []string{"", flg.Usage}
+	}
+
 	name, usage := flag.UnquoteUsage(flg)
+
+	// if no backquoted names found, try to infer from [flag.Getter]
+	if name == "" {
+		if g, ok := flg.Value.(flag.Getter); ok {
+			switch g.Get().(type) {
+			case uint, uint64:
+				name = "uint"
+			case int, int64:
+				name = "int"
+			case float64:
+				name = "float"
+			case time.Duration:
+				name = "duration"
+			default:
+				name = "arg"
+			}
+		}
+	}
+
 	return []string{name, usage}
+}
+
+// isHiddenFlag checks if the given flag is hidden.
+func isHiddenFlag(flg *flag.Flag) bool {
+	hf, ok := flg.Value.(getopt.HiddenFlag)
+	return ok && hf.IsHiddenFlag()
+}
+
+type boolFlag interface {
+	flag.Value
+	IsBoolFlag() bool
+}
+
+// isBoolFlag checks if the given flag is a boolean flag.
+func isBoolFlag(flg *flag.Flag) bool {
+	hf, ok := flg.Value.(boolFlag)
+	return ok && hf.IsBoolFlag()
 }

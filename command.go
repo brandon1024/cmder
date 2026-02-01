@@ -2,8 +2,7 @@ package cmder
 
 import (
 	"context"
-
-	"github.com/brandon1024/cmder/flag"
+	"flag"
 )
 
 // Command is the fundamental interface implemented by types that are runnable commands or subcommands. Commands can

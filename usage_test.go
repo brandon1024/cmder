@@ -2,10 +2,11 @@ package cmder
 
 import (
 	"bytes"
+	"flag"
 	"testing"
 	"time"
 
-	"github.com/brandon1024/cmder/flag"
+	"github.com/brandon1024/cmder/getopt"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -21,9 +22,6 @@ structure and execute your commands, but that's about it. 'cmder' embraces simpl
 
 To define a new command, simply define a type that implements the 'Command' interface. If you want your command to have
 additional behaviour like flags or subcommands, simply implement the appropriate interfaces.
-
-'cmder' also offers a flag package which is a drop-in replacement for the standard library package of the same name for
-parsing POSIX/GNU style flags.
 `
 
 const examples = `
@@ -44,9 +42,6 @@ structure and execute your commands, but that's about it. 'cmder' embraces simpl
 
 To define a new command, simply define a type that implements the 'Command' interface. If you want your command to have
 additional behaviour like flags or subcommands, simply implement the appropriate interfaces.
-
-'cmder' also offers a flag package which is a drop-in replacement for the standard library package of the same name for
-parsing POSIX/GNU style flags.
 
 Usage:
   test [flags] [args]
@@ -88,9 +83,9 @@ const ExpectedStdFlagUsageTemplate = `usage: test [flags] [args]
         serial number of the device (e.g. 10293894a)
   --web.disable-exporter-metrics (default false)
         exclude metrics about the exporter itself (go_*)
-  --web.listen-address <string> (default ":9090")
+  --web.listen-address <string> (default :9090)
         address on which to expose metrics
-  --web.telemetry-path <string> (default "/metrics")
+  --web.telemetry-path <string> (default /metrics)
         path under which to expose metrics
 `
 
@@ -103,7 +98,7 @@ func TestUsage(t *testing.T) {
 			Help:        desc,
 			Examples:    examples,
 		},
-		fs: flag.NewFlagSet("cmd", flag.ContinueOnError),
+		fs: getopt.NewPosixFlagSet("cmd", flag.ContinueOnError),
 	}
 
 	cmd.fs.String("serial-number", "", "serial number of the device (e.g. 10293894a)")
@@ -162,7 +157,7 @@ func TestFlags(t *testing.T) {
 	}
 
 	t.Run("should group bool flags", func(t *testing.T) {
-		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Bool("all", false, "bool flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("all"), "a"))
 		cmd.fs.Var(alias(cmd.fs.Lookup("a"), "l"))
@@ -200,7 +195,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group string flags", func(t *testing.T) {
-		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.String("from", "HEAD^", "string flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("from"), "b"))
 		cmd.fs.Var(alias(cmd.fs.Lookup("from"), "B"))
@@ -238,7 +233,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group duration flags", func(t *testing.T) {
-		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Duration("since", time.Minute, "duration flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("since"), "s"))
 		cmd.fs.Var(alias(cmd.fs.Lookup("since"), "f"))
@@ -276,7 +271,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group float flags", func(t *testing.T) {
-		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Float64("epsilon", 0.00001, "float64 flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("epsilon"), "e"))
 		cmd.fs.Var(alias(cmd.fs.Lookup("e"), "ep"))
@@ -314,7 +309,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group int flags", func(t *testing.T) {
-		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Int("page", 0, "int flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("page"), "p"))
 		cmd.fs.Int("count", 100, "int flag")
@@ -355,7 +350,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group int64 flags", func(t *testing.T) {
-		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Int64("page", 0, "int64 flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("page"), "a"))
 		cmd.fs.Int64("count", 100, "int64 flag")
@@ -396,7 +391,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group uint flags", func(t *testing.T) {
-		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Uint("page", 0, "uint flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("page"), "x"))
 		cmd.fs.Uint("count", 100, "uint flag")
@@ -437,7 +432,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group uint64 flags", func(t *testing.T) {
-		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Uint64("page", 0, "uint64 flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("page"), "px"))
 		cmd.fs.Uint64("count", 100, "uint64 flag")
@@ -485,7 +480,7 @@ func TestFlags(t *testing.T) {
 			return nil
 		}
 
-		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.BoolFunc("verbose", "boolfunc flag", fn1)
 		cmd.fs.Var(alias(cmd.fs.Lookup("verbose"), "v"))
 		cmd.fs.Func("optimize", "func flag", fn2)
