@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/brandon1024/cmder"
-	"github.com/brandon1024/cmder/flag"
 )
 
 const ServerCommandUsageLine = `server [<options>...]`

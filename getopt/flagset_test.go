@@ -1,36 +1,17 @@
-package flag
+package getopt
 
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"slices"
 	"strings"
 	"testing"
 )
 
-func TestFlagSet(t *testing.T) {
+func TestPosixFlagSet(t *testing.T) {
 	t.Run("Var", func(t *testing.T) {
-		fs := NewFlagSet("test", ContinueOnError)
-
-		t.Run("should panic if flag name begins with hyphen", func(t *testing.T) {
-			defer func() {
-				if r := recover(); r == nil {
-					t.Fatalf("no panic")
-				}
-			}()
-
-			fs.String("-test", "", "string var")
-		})
-
-		t.Run("should panic if flag name ends with hyphen", func(t *testing.T) {
-			defer func() {
-				if r := recover(); r == nil {
-					t.Fatalf("no panic")
-				}
-			}()
-
-			fs.String("test-", "", "string var")
-		})
+		fs := NewPosixFlagSet("test", flag.ContinueOnError)
 
 		t.Run("should panic if flag name contains invalid characters", func(t *testing.T) {
 			defer func() {
@@ -59,7 +40,7 @@ func TestFlagSet(t *testing.T) {
 				count  uint
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "output", "-", "output file")
 			fs.UintVar(&count, "count", 12, "number of results")
 
@@ -74,7 +55,7 @@ func TestFlagSet(t *testing.T) {
 		t.Run("should allow flag names with periods", func(t *testing.T) {
 			var addr string
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&addr, "web.listen-address", ":8080", "bind `address` for the web server")
 
 			if addr != ":8080" {
@@ -84,7 +65,7 @@ func TestFlagSet(t *testing.T) {
 	})
 
 	t.Run("Lookup", func(t *testing.T) {
-		fs := NewFlagSet("test", ContinueOnError)
+		fs := NewPosixFlagSet("test", flag.ContinueOnError)
 
 		t.Run("should return nil if flag doesn't exist", func(t *testing.T) {
 			if result := fs.Lookup("unknown"); result != nil {
@@ -102,13 +83,44 @@ func TestFlagSet(t *testing.T) {
 	})
 
 	t.Run("Parse", func(t *testing.T) {
+		t.Run("should allow wrapping of existing flag set", func(t *testing.T) {
+			var (
+				count  uint
+				output string
+				all    bool
+			)
+
+			fs := flag.NewFlagSet("test", flag.ContinueOnError)
+			fs.UintVar(&count, "count", 12, "`number` of results")
+			fs.UintVar(&count, "c", 12, "`number` of results")
+			fs.StringVar(&output, "output", "-", "output `file`")
+			fs.StringVar(&output, "o", "-", "output `file`")
+			fs.BoolVar(&all, "all", false, "show `all`")
+			fs.BoolVar(&all, "a", false, "show `all`")
+
+			err := (&PosixFlagSet{FlagSet: fs}).Parse([]string{"--output", "test.out", "--count", "0x12", "--all"})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if output != "test.out" {
+				t.Fatalf("output var not updated with expected value: %s", output)
+			}
+			if count != 0x12 {
+				t.Fatalf("count var not updated with expected value: %d", count)
+			}
+			if !all {
+				t.Fatalf("all var not updated with expected value: %v", all)
+			}
+		})
+
 		t.Run("should parse long flags", func(t *testing.T) {
 			var (
 				output string
 				count  uint
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "output", "-", "output file")
 			fs.UintVar(&count, "count", 12, "number of results")
 
@@ -131,7 +143,7 @@ func TestFlagSet(t *testing.T) {
 				count  uint
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "output", "-", "output file")
 			fs.UintVar(&count, "count", 12, "number of results")
 
@@ -154,7 +166,7 @@ func TestFlagSet(t *testing.T) {
 				b2 bool
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.BoolVar(&b1, "b1", false, "boolean flag b1")
 			fs.BoolVar(&b2, "b2", true, "boolean flag b1")
 
@@ -177,7 +189,7 @@ func TestFlagSet(t *testing.T) {
 				b2 bool
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.BoolVar(&b1, "b1", false, "boolean flag b1")
 			fs.BoolVar(&b2, "b2", true, "boolean flag b1")
 
@@ -200,7 +212,7 @@ func TestFlagSet(t *testing.T) {
 				count  uint
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "o", "-", "output file")
 			fs.UintVar(&count, "c", 12, "number of results")
 
@@ -225,7 +237,7 @@ func TestFlagSet(t *testing.T) {
 				b2     bool
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "o", "-", "output file")
 			fs.UintVar(&count, "c", 12, "number of results")
 			fs.BoolVar(&b1, "O", false, "assume output file")
@@ -258,7 +270,7 @@ func TestFlagSet(t *testing.T) {
 				b2     bool
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "o", "-", "output file")
 			fs.UintVar(&count, "c", 12, "number of results")
 			fs.BoolVar(&b1, "O", false, "assume output file")
@@ -291,7 +303,7 @@ func TestFlagSet(t *testing.T) {
 				b2     bool
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "o", "-", "output file")
 			fs.UintVar(&count, "c", 12, "number of results")
 			fs.BoolVar(&b1, "O", false, "assume output file")
@@ -330,7 +342,7 @@ func TestFlagSet(t *testing.T) {
 				b2     bool
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "o", "-", "output file")
 			fs.UintVar(&count, "c", 12, "number of results")
 			fs.BoolVar(&b1, "O", false, "assume output file")
@@ -353,7 +365,7 @@ func TestFlagSet(t *testing.T) {
 				b2     bool
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "o", "-", "output file")
 			fs.UintVar(&count, "c", 12, "number of results")
 			fs.BoolVar(&b1, "O", false, "assume output file")
@@ -381,7 +393,7 @@ func TestFlagSet(t *testing.T) {
 				count  uint
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "output", "-", "output file")
 			fs.UintVar(&count, "count", 12, "number of results")
 
@@ -410,12 +422,12 @@ func TestFlagSet(t *testing.T) {
 				count  uint
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "output", "-", "output file")
 			fs.UintVar(&count, "count", 12, "number of results")
 
 			err := fs.Parse([]string{"-h", "--output", "test.out", "--count", "0x80"})
-			if !errors.Is(err, ErrHelp) {
+			if !errors.Is(err, flag.ErrHelp) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -433,12 +445,12 @@ func TestFlagSet(t *testing.T) {
 				count  uint
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "output", "-", "output file")
 			fs.UintVar(&count, "count", 12, "number of results")
 
 			err := fs.Parse([]string{"--help", "--output", "test.out", "--count", "0x80"})
-			if !errors.Is(err, ErrHelp) {
+			if !errors.Is(err, flag.ErrHelp) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -457,7 +469,7 @@ func TestFlagSet(t *testing.T) {
 				help   bool
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "output", "-", "output file")
 			fs.UintVar(&count, "count", 12, "number of results")
 			fs.BoolVar(&help, "help", false, "show help")
@@ -484,7 +496,7 @@ func TestFlagSet(t *testing.T) {
 				count  uint
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "output", "-", "output file")
 			fs.UintVar(&count, "count", 12, "number of results")
 
@@ -505,7 +517,7 @@ func TestFlagSet(t *testing.T) {
 				b2     bool
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "o", "-", "output file")
 			fs.UintVar(&count, "c", 12, "number of results")
 			fs.BoolVar(&b1, "O", false, "assume output file")
@@ -526,7 +538,7 @@ func TestFlagSet(t *testing.T) {
 				count  uint
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "output", "-", "output file")
 			fs.UintVar(&count, "count", 12, "number of results")
 
@@ -545,7 +557,7 @@ func TestFlagSet(t *testing.T) {
 				count  uint
 			)
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "o", "-", "output file")
 			fs.UintVar(&count, "c", 12, "number of results")
 
@@ -561,7 +573,7 @@ func TestFlagSet(t *testing.T) {
 		t.Run("should support shorthand flag aliasing", func(t *testing.T) {
 			var output string
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.StringVar(&output, "output", "-", "output `file`")
 
 			flg := fs.Lookup("output")
@@ -582,7 +594,7 @@ func TestFlagSet(t *testing.T) {
 		t.Run("should render short flags correctly", func(t *testing.T) {
 			var buf bytes.Buffer
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.SetOutput(&buf)
 
 			fs.Uint("c", 12, "number of results")
@@ -598,7 +610,7 @@ func TestFlagSet(t *testing.T) {
 		t.Run("should render long flags correctly", func(t *testing.T) {
 			var buf bytes.Buffer
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.SetOutput(&buf)
 
 			fs.Uint("count", 12, "number of results")
@@ -614,7 +626,7 @@ func TestFlagSet(t *testing.T) {
 		t.Run("should pick out quoted argument name correctly", func(t *testing.T) {
 			var buf bytes.Buffer
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.SetOutput(&buf)
 
 			fs.Uint("count", 12, "`number` of results")
@@ -630,7 +642,7 @@ func TestFlagSet(t *testing.T) {
 		t.Run("should render in lexical order", func(t *testing.T) {
 			var buf bytes.Buffer
 
-			fs := NewFlagSet("test", ContinueOnError)
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.SetOutput(&buf)
 
 			fs.Uint("count", 12, "`number` of results")
@@ -650,9 +662,9 @@ func TestFlagSet(t *testing.T) {
         number of results
   --count <number> (default 12)
         number of results
-   -o <file> (default "-")
+   -o <file> (default -)
         output file
-  --output <file> (default "-")
+  --output <file> (default -)
         output file
 `
 			if buf.String() != expected {

@@ -9,23 +9,15 @@ applications in Go.
 ## Overview
 
 `cmder` is a simple and flexible library for building command-line interfaces in
-Go. If you're coming from [`Cobra`](https://github.com/spf13/cobra) and have
-used it for any length of time, you have surely had your fair share of
-difficulties with the library. `cmder` will feel quite a bit more comfortable
-and easy to use, and the wide range of examples throughout the project should
-help you get started.
-
-`cmder` takes a very opinionated approach to building command-line interfaces.
-The library will help you define, structure and execute your commands, but
-that's about it. `cmder` embraces simplicity because sometimes, less is better.
+Go. `cmder` takes a very opinionated approach to building command-line
+interfaces. The library will help you define, structure and execute your
+commands, but that's about it. `cmder` embraces simplicity because sometimes,
+less is better. The wide range of examples throughout the project should help
+you get started.
 
 To define a new command, simply define a type that implements the `Command`
 interface. If you want your command to have additional behaviour like flags or
 subcommands, simply implement the appropriate interfaces.
-
-`cmder` also offers a [flag](flag/doc.go) package which is a drop-in replacement
-for the standard library package of the same name for parsing POSIX/GNU style
-flags.
 
 Here are some highlights:
 
@@ -94,7 +86,7 @@ func main() {
 For more complex commands, you can define your own command type. By embedding
 `cmder.BaseCommand`, your command automatically implements all of the important
 interfaces needed to document your command, define flags, register subcommands,
-etc.
+and so on. You can then override the default behaviour with your own.
 
 ```go
 package main
@@ -158,90 +150,9 @@ If you need even more flexibility, you can instead implement the interfaces that
 are relevant for your command:
 
 - `Command`: All commands and subcommands must implement this interface.
+- `FlagInitializer`: If your command has flags, implement this interface.
 - `RunnableLifecycle`: If your command needs some initialization or teardown,
   implement this interface.
-- `FlagInitializer`: If your command has flags, implement this interface.
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"flag"
-
-	"github.com/brandon1024/cmder"
-)
-
-const LifecycleCommandUsageLine = `lifecycle [-m <msg>] [<args>...]`
-
-const LifecycleCommandShortHelpText = `Example command with lifecycle routines`
-
-const LifecycleCommandHelpText = `
-'lifecycle' demonstrates a command that implements the RunnableLifecycle interface, defining initialization and
-destroy routines.
-`
-
-const LifecycleCommandExamples = `
-# demonstrate initialization and teardown
-lifecycle
-`
-
-type LifecycleCommand struct{
-	msg string
-}
-
-func (c *LifecycleCommand) Name() string {
-	return "lifecycle"
-}
-
-func (c *BaseCommandExample) InitializeFlags(fs *flag.FlagSet) {
-	fs.StringVar(&c.msg, "m", "hello world", "message to broadcast")
-	fs.StringVar(&c.msg, "msg", "hello world", "message to broadcast")
-}
-
-func (c *LifecycleCommand) Initialize(ctx context.Context, args []string) error {
-	fmt.Println("lifecycle: initializing")
-	return nil
-}
-
-func (c *LifecycleCommand) Run(ctx context.Context, args []string) error {
-	fmt.Printf("lifecycle: %s\n", c.msg)
-	return nil
-}
-
-func (c *LifecycleCommand) Destroy(ctx context.Context, args []string) error {
-	fmt.Println("lifecycle: shutting down")
-	return nil
-}
-
-func (c *LifecycleCommand) UsageLine() string {
-	return LifecycleCommandUsageLine
-}
-
-func (c *LifecycleCommand) ShortHelpText() string {
-	return LifecycleCommandShortHelpText
-}
-
-func (c *LifecycleCommand) HelpText() string {
-	return LifecycleCommandHelpText
-}
-
-func (c *LifecycleCommand) ExampleText() string {
-	return LifecycleCommandExamples
-}
-
-func (c *LifecycleCommand) Hidden() bool {
-	return false
-}
-
-func main() {
-	if err := cmder.Execute(context.Background(), &LifecycleCommand{}); err != nil {
-		fmt.Printf("unexpected error occurred: %v", err)
-		os.Exit(1)
-	}
-}
-```
 
 For more information, read through our package documentation on
 [pkg.go.dev](https://pkg.go.dev/github.com/brandon1024/cmder).

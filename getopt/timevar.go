@@ -1,10 +1,7 @@
-package flag_test
+package getopt
 
 import (
-	"fmt"
 	"time"
-
-	"github.com/brandon1024/cmder/flag"
 )
 
 // TimeVar is a [flag.Value] for flags that accept timestamps in [time.RFC3339] format. TimeVar also implements
@@ -30,25 +27,4 @@ func (t *TimeVar) Set(value string) error {
 // [time.Time].
 func (t *TimeVar) Get() any {
 	return time.Time(*t)
-}
-
-// You can define custom types implementing [flag.Value] to handle different types of flags, like timestamps, IP
-// addresses, string maps or slices.
-func ExampleValue_time() {
-	var since TimeVar
-
-	fs := flag.NewFlagSet("custom", flag.ContinueOnError)
-	fs.Var(&since, "since", "show items since")
-
-	args := []string{
-		"--since", "2025-01-01T00:00:00Z",
-	}
-
-	if err := fs.Parse(args); err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("since: %s\n", since.String())
-	// Output:
-	// since: 2025-01-01T00:00:00Z
 }

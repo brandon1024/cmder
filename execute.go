@@ -3,9 +3,10 @@ package cmder
 import (
 	"context"
 	"errors"
+	"flag"
 	"os"
 
-	"github.com/brandon1024/cmder/flag"
+	"github.com/brandon1024/cmder/getopt"
 )
 
 var (
@@ -59,6 +60,8 @@ var (
 // If the command also implements [FlagInitializer], InitializeFlags() will be invoked to register additional
 // command-line flags. Each command/subcommand is given a unique [flag.FlagSet]. Help flags ('-h', '--help') are
 // configured automatically and must not be set by the application.
+//
+// Execute parses getopt-style (GNU/POSIX) command-line arguments with the help of package [getopt].
 //
 // # Usage and Help Texts
 //
@@ -136,7 +139,7 @@ func execute(ctx context.Context, stack []command) error {
 type command struct {
 	Command
 
-	fs           *flag.FlagSet
+	fs           *getopt.PosixFlagSet
 	initializeFn func(context.Context, []string) error
 	destroyFn    func(context.Context, []string) error
 	showHelp     bool
@@ -150,7 +153,7 @@ func buildCallStack(cmd Command, args []string) ([]command, error) {
 	for cmd != nil {
 		this := command{
 			Command:      cmd,
-			fs:           flag.NewFlagSet(cmd.Name(), flag.ContinueOnError),
+			fs:           getopt.NewPosixFlagSet(cmd.Name(), flag.ContinueOnError),
 			initializeFn: func(context.Context, []string) error { return nil },
 			destroyFn:    func(context.Context, []string) error { return nil },
 		}
@@ -165,7 +168,7 @@ func buildCallStack(cmd Command, args []string) ([]command, error) {
 		}
 
 		if c, ok := cmd.(FlagInitializer); ok {
-			c.InitializeFlags(this.fs)
+			c.InitializeFlags(this.fs.FlagSet)
 		}
 
 		if err := this.fs.Parse(args); err != nil {

@@ -1,11 +1,8 @@
 /*
-cmder is a simple and flexible library for building command-line interfaces in Go. If you're coming from Cobra and have
-used it for any length of time, you have surely had your fair share of difficulties with the library. cmder will feel
-quite a bit more comfortable and easy to use, and the wide range of examples throughout the project should help you get
-started.
-
-cmder takes a very opinionated approach to building command-line interfaces. The library will help you define, structure
-and execute your commands, but that's about it. cmder embraces simplicity because sometimes, less is better.
+cmder is a simple and flexible library for building command-line interfaces in Go. cmder takes a very opinionated
+approach to building command-line interfaces. The library will help you define, structure and execute your commands, but
+that's about it. cmder embraces simplicity because sometimes, less is better. The wide range of examples throughout the
+project should help you get started.
 
 To define a new command, simply define a type that implements the [Command] interface. If you want your command to have
 additional behaviour like flags or subcommands, simply implement the appropriate interfaces.
@@ -18,6 +15,6 @@ additional behaviour like flags or subcommands, simply implement the appropriate
 
 To get started, see [Command] and [Execute].
 
-For POSIX/GNU flag parsing, see package [flag].
+For POSIX/GNU flag parsing, see package [getopt].
 */
 package cmder
