@@ -21,7 +21,7 @@ func ExampleMapVar() {
 	args := []string{
 		"--variable", "key1=value1",
 		"-v", "key2=value2,key3=value3",
-		`--variable=hello=" HI, WORLD "`,
+		`--variable="hello= HI, WORLD "`,
 	}
 
 	if err := fs.Parse(args); err != nil {

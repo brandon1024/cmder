@@ -37,7 +37,15 @@ Examples:
 {{- with (flags .) -}}
 	{{- println -}}
 	{{- println "Flags:" -}}
+
+	{{- $print_started := false -}}
+
 	{{- range . -}}
+		{{- if $print_started -}}
+			{{- println -}}
+		{{- end -}}
+		{{- $print_started = true -}}
+
 		{{- printf "  " -}}
 
 		{{- range $index, $flg := . -}}
@@ -60,8 +68,8 @@ Examples:
 			{{- end -}}
 		{{- end -}}
 
-		{{ if (index . 0).DefValue }}
-			{{- printf " (default %s)" (index . 0).DefValue -}}
+		{{ with (index . 0).DefValue }}
+			{{- printf " (default %s)" . -}}
 		{{- end -}}
 
 		{{- println -}}
@@ -150,10 +158,7 @@ func flags(cmd command) map[string][]*flag.Flag {
 		for i := len(collected) - 1; i >= 0; i-- {
 			other := collected[i]
 
-			// some value types are not comparable (like boolfunc)
-			canCompare := reflect.ValueOf(flg.Value).Comparable() && reflect.ValueOf(other.Value).Comparable()
-
-			if canCompare && flg.Value == other.Value {
+			if areSame(flg.Value, other.Value) {
 				groups[flg.Name] = append(groups[flg.Name], other)
 				collected = append(collected[:i], collected[i+1:]...)
 			}
@@ -170,6 +175,27 @@ func flags(cmd command) map[string][]*flag.Flag {
 	}
 
 	return groups
+}
+
+func areSame(f1, f2 flag.Value) bool {
+	var (
+		ref1 = reflect.ValueOf(f1)
+		ref2 = reflect.ValueOf(f2)
+	)
+
+	if ref1.Comparable() && ref2.Comparable() && f1 == f2 {
+		return true
+	}
+
+	if ref1.Kind() != ref2.Kind() {
+		return false
+	}
+
+	if !slices.Contains([]reflect.Kind{reflect.Map, reflect.Pointer, reflect.Slice}, ref1.Kind()) {
+		return false
+	}
+
+	return ref1.Pointer() == ref2.Pointer()
 }
 
 // flagUsage dumps the flag usage as rendered by the flag library. See [flag.FlagSet.PrintDefaults].

@@ -3,6 +3,7 @@ package cmder
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"testing"
 	"time"
 
@@ -52,41 +53,51 @@ Examples:
   test --poll-interval <sec> --web.disable-exporter-metrics
 
 Flags:
-  -a <string>, --addr=<string>
+  -a <address>, --addr=<address>
       address and port of the device (e.g. 192.168.1.1:4567)
-  --poll-interval=<duration> (default 0s)
-      attempt to poll the device status more frequently than advertised
+
+  -t <key=value>, --arg=<key=value> (default k=v)
+      render template with arguments (key=value)
+
   --reconnect-interval=<duration> (default 1m0s)
       interval between connection attempts (e.g. 1m)
-  -s <string>, --serial-number=<string>
+
+  -s <serial>, --serial-number=<serial>
       serial number of the device (e.g. 10293894a)
+
   --web.disable-exporter-metrics (default false)
       exclude metrics about the exporter itself (go_*)
+
   --web.listen-address=<string> (default :9090)
       address on which to expose metrics
+
   --web.telemetry-path=<string> (default /metrics)
       path under which to expose metrics
 `
 
 const ExpectedStdFlagUsageTemplate = `usage: test [flags] [args]
-   -a <string>
-        address and port of the device (e.g. 192.168.1.1:4567)
-  --addr <string>
-        address and port of the device (e.g. 192.168.1.1:4567)
-  --poll-interval <duration> (default 0s)
-        attempt to poll the device status more frequently than advertised
-  --reconnect-interval <duration> (default 1m0s)
-        interval between connection attempts (e.g. 1m)
-   -s <string>
-        serial number of the device (e.g. 10293894a)
-  --serial-number <string>
-        serial number of the device (e.g. 10293894a)
-  --web.disable-exporter-metrics (default false)
-        exclude metrics about the exporter itself (go_*)
-  --web.listen-address <string> (default :9090)
-        address on which to expose metrics
-  --web.telemetry-path <string> (default /metrics)
-        path under which to expose metrics
+  -a address
+    	address and port of the device (e.g. 192.168.1.1:4567)
+  -addr address
+    	address and port of the device (e.g. 192.168.1.1:4567)
+  -arg key=value
+    	render template with arguments (key=value) (default k=v)
+  -poll-interval value
+    	attempt to poll the device status more frequently than advertised (default 0s)
+  -reconnect-interval duration
+    	interval between connection attempts (e.g. 1m) (default 1m0s)
+  -s serial
+    	serial number of the device (e.g. 10293894a)
+  -serial-number serial
+    	serial number of the device (e.g. 10293894a)
+  -t key=value
+    	render template with arguments (key=value) (default k=v)
+  -web.disable-exporter-metrics
+    	exclude metrics about the exporter itself (go_*)
+  -web.listen-address string
+    	address on which to expose metrics (default ":9090")
+  -web.telemetry-path string
+    	path under which to expose metrics (default "/metrics")
 `
 
 func TestUsage(t *testing.T) {
@@ -98,15 +109,20 @@ func TestUsage(t *testing.T) {
 			Help:        desc,
 			Examples:    examples,
 		},
-		fs: getopt.NewPosixFlagSet("cmd", flag.ContinueOnError),
+		fs: flag.NewFlagSet("cmd", flag.ContinueOnError),
 	}
 
-	cmd.fs.String("serial-number", "", "serial number of the device (e.g. 10293894a)")
+	cmd.fs.String("serial-number", "", "`serial` number of the device (e.g. 10293894a)")
 	cmd.fs.Var(alias(cmd.fs.Lookup("serial-number"), "s"))
-	cmd.fs.String("addr", "", "address and port of the device (e.g. 192.168.1.1:4567)")
+	cmd.fs.String("addr", "", "`address` and port of the device (e.g. 192.168.1.1:4567)")
 	cmd.fs.Var(alias(cmd.fs.Lookup("addr"), "a"))
 
+	cmd.fs.Var(getopt.MapVar{"k": "v"}, "arg", "render template with arguments (`key=value`)")
+	cmd.fs.Var(alias(cmd.fs.Lookup("arg"), "t"))
+
 	cmd.fs.Duration("poll-interval", time.Duration(0), "attempt to poll the device status more frequently than advertised")
+	getopt.Hide(cmd.fs.Lookup("poll-interval"))
+
 	cmd.fs.Duration("reconnect-interval", time.Minute, "interval between connection attempts (e.g. 1m)")
 	cmd.fs.String("web.listen-address", ":9090", "address on which to expose metrics")
 	cmd.fs.String("web.telemetry-path", "/metrics", "path under which to expose metrics")
@@ -138,6 +154,8 @@ func TestUsage(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
+			fmt.Println(buf.String())
+
 			if diff := cmp.Diff(ExpectedStdFlagUsageTemplate, buf.String()); diff != "" {
 				t.Fatalf("usage text mismatch (-want +got):\n%s", diff)
 			}
@@ -157,7 +175,7 @@ func TestFlags(t *testing.T) {
 	}
 
 	t.Run("should group bool flags", func(t *testing.T) {
-		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Bool("all", false, "bool flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("all"), "a"))
 		cmd.fs.Var(alias(cmd.fs.Lookup("a"), "l"))
@@ -195,7 +213,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group string flags", func(t *testing.T) {
-		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.String("from", "HEAD^", "string flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("from"), "b"))
 		cmd.fs.Var(alias(cmd.fs.Lookup("from"), "B"))
@@ -233,7 +251,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group duration flags", func(t *testing.T) {
-		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Duration("since", time.Minute, "duration flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("since"), "s"))
 		cmd.fs.Var(alias(cmd.fs.Lookup("since"), "f"))
@@ -271,7 +289,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group float flags", func(t *testing.T) {
-		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Float64("epsilon", 0.00001, "float64 flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("epsilon"), "e"))
 		cmd.fs.Var(alias(cmd.fs.Lookup("e"), "ep"))
@@ -309,7 +327,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group int flags", func(t *testing.T) {
-		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Int("page", 0, "int flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("page"), "p"))
 		cmd.fs.Int("count", 100, "int flag")
@@ -350,7 +368,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group int64 flags", func(t *testing.T) {
-		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Int64("page", 0, "int64 flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("page"), "a"))
 		cmd.fs.Int64("count", 100, "int64 flag")
@@ -391,7 +409,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group uint flags", func(t *testing.T) {
-		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Uint("page", 0, "uint flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("page"), "x"))
 		cmd.fs.Uint("count", 100, "uint flag")
@@ -432,7 +450,7 @@ func TestFlags(t *testing.T) {
 	})
 
 	t.Run("should group uint64 flags", func(t *testing.T) {
-		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.Uint64("page", 0, "uint64 flag")
 		cmd.fs.Var(alias(cmd.fs.Lookup("page"), "px"))
 		cmd.fs.Uint64("count", 100, "uint64 flag")
@@ -472,6 +490,47 @@ func TestFlags(t *testing.T) {
 		}
 	})
 
+	t.Run("should group mapvar flags", func(t *testing.T) {
+		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs.Var(getopt.MapVar{}, "arg", "mapvar flag")
+		cmd.fs.Var(alias(cmd.fs.Lookup("arg"), "a"))
+		cmd.fs.Var(getopt.MapVar{}, "template", "mapvar flag")
+		cmd.fs.Var(alias(cmd.fs.Lookup("template"), "t"))
+
+		groups := flags(cmd)
+		if len(groups) != 2 {
+			t.Fatalf("unexpected number of flag groups: %v", groups)
+		}
+
+		group, ok := groups["arg"]
+		if !ok {
+			t.Fatalf("no group found")
+		}
+		if len(group) != 2 {
+			t.Fatalf("unexpected number of flag groups: %v", group)
+		}
+		if group[0].Name != "a" {
+			t.Fatalf("unexpected sort order in flag group")
+		}
+		if group[1].Name != "arg" {
+			t.Fatalf("unexpected sort order in flag group")
+		}
+
+		group, ok = groups["template"]
+		if !ok {
+			t.Fatalf("no group found")
+		}
+		if len(group) != 2 {
+			t.Fatalf("unexpected number of flag groups: %v", group)
+		}
+		if group[0].Name != "t" {
+			t.Fatalf("unexpected sort order in flag group")
+		}
+		if group[1].Name != "template" {
+			t.Fatalf("unexpected sort order in flag group")
+		}
+	})
+
 	t.Run("should not group func flags which are not comparable", func(t *testing.T) {
 		fn1 := func(v string) error {
 			return nil
@@ -480,7 +539,7 @@ func TestFlags(t *testing.T) {
 			return nil
 		}
 
-		cmd.fs = getopt.NewPosixFlagSet("cmd", flag.ContinueOnError)
+		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
 		cmd.fs.BoolFunc("verbose", "boolfunc flag", fn1)
 		cmd.fs.Var(alias(cmd.fs.Lookup("verbose"), "v"))
 		cmd.fs.Func("optimize", "func flag", fn2)
