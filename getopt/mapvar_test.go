@@ -18,37 +18,37 @@ func TestMapVar(t *testing.T) {
 					`HELLO`: `WORLD`,
 				},
 			}, {
+				args: []string{`-m`, `HELLO,WORLD`},
+				expected: map[string]string{
+					`HELLO`: ``,
+					`WORLD`: ``,
+				},
+			}, {
 				args: []string{`-m`, `HELLO=WORLD,HALLO=WELT`},
 				expected: map[string]string{
 					`HELLO`: `WORLD`,
 					`HALLO`: `WELT`,
 				},
 			}, {
-				args: []string{`-m`, `HELLO="WORLD,HALLO=WELT"`},
+				args: []string{`-m`, `"HELLO=WORLD,HALLO=WELT"`},
 				expected: map[string]string{
 					`HELLO`: `WORLD,HALLO=WELT`,
 				},
 			}, {
-				args: []string{`-m`, `HELLO="WORLD",HALLO=WELT`},
+				args: []string{`-m`, `"HELLO=WORLD",HALLO=WELT`},
 				expected: map[string]string{
 					`HELLO`: `WORLD`,
 					`HALLO`: `WELT`,
 				},
 			}, {
-				args: []string{`-m`, `HELLO=" HI, WORLD "`},
+				args: []string{`-m`, `"HELLO= HI, WORLD "`},
 				expected: map[string]string{
 					`HELLO`: ` HI, WORLD `,
 				},
 			}, {
 				args: []string{`-m`, `HELLO = WORLD`},
 				expected: map[string]string{
-					`HELLO`: `WORLD`,
-				},
-			}, {
-				args: []string{`-m`, `HELLO=WORLD`, `-m`, `HALLO=WELT`},
-				expected: map[string]string{
-					`HELLO`: `WORLD`,
-					`HALLO`: `WELT`,
+					`HELLO `: ` WORLD`,
 				},
 			}, {
 				args: []string{`-m`, `HELLO=WORLD`, `-m`, `HALLO=WELT`},
@@ -68,14 +68,9 @@ func TestMapVar(t *testing.T) {
 					`HELLO`: `world`,
 				},
 			}, {
-				args: []string{`-m`, `HELLO=" WOR "	LD`},
+				args: []string{`-m`, `"HELLO= WO 	R	LD  "`},
 				expected: map[string]string{
-					`HELLO`: ` WOR LD`,
-				},
-			}, {}, {
-				args: []string{`-m`, `HELLO=" WO "	"R"	LD " "`},
-				expected: map[string]string{
-					`HELLO`: ` WO RLD `,
+					`HELLO`: ` WO 	R	LD  `,
 				},
 			}, {
 				args: []string{`-m`, `HELLO=WORLD=HALLO`},
@@ -98,19 +93,28 @@ func TestMapVar(t *testing.T) {
 			if !maps.Equal(tt.expected, mv) {
 				t.Errorf("unexpected parsed args: %v (%v)", mv, tt.args)
 			}
+
+			// try parsing again from the output of [MapVar.String]
+			mv2 := MapVar{}
+
+			fs = flag.NewFlagSet("map", flag.ContinueOnError)
+			fs.Var(mv2, "m", "test")
+
+			if err := fs.Parse([]string{"-m", mv.String()}); err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if !maps.Equal(mv, mv2) {
+				t.Errorf("unexpected parsed args: %v (%v)", mv, tt.args)
+			}
 		}
 	})
 
 	t.Run("should error for malformed flags", func(t *testing.T) {
 		testcases := [][]string{
-			{`-m`, `HELLO`},
-			{`-m`, `HELLO,WORLD`},
-			{`-m`, `HELLO=WORLD,`},
 			{`-m`, `HELLO="WORLD`},
 			{`-m`, `HELLO=WORLD"`},
 			{`-m`, `"HELLO"=WORLD`},
-			{`-m`, `HELLO=WORLD,hi,HALLO=WELT`},
-			{`-m`, `,`},
 		}
 
 		for _, tt := range testcases {

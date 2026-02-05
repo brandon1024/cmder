@@ -5,6 +5,8 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/brandon1024/cmder/getopt"
 )
@@ -15,6 +17,9 @@ var (
 
 	// Returned when an [ExecuteOption] provided to [Execute] is illegal.
 	ErrIllegalExecuteOptions = errors.New("cmder: illegal command execution option")
+
+	// Returned when an [ExecuteOption] provided to [Execute] is illegal.
+	ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from environment variable")
 )
 
 // Execute runs a [Command].
@@ -61,7 +66,10 @@ var (
 // command-line flags. Each command/subcommand is given a unique [flag.FlagSet]. Help flags ('-h', '--help') are
 // configured automatically and must not be set by the application.
 //
-// Execute parses getopt-style (GNU/POSIX) command-line arguments with the help of package [getopt].
+// Execute parses getopt-style (GNU/POSIX) command-line arguments with the help of package [getopt]. To use the standard
+// [flag] syntax instead, see [WithNativeFlags].
+//
+// To bind environment variables to flags, see [WithEnvironmentBinding].
 //
 // # Usage and Help Texts
 //
@@ -83,7 +91,7 @@ func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 	}
 
 	// build a stack of command invocations
-	stack, err := buildCallStack(cmd, ops.args)
+	stack, err := buildCallStack(cmd, ops)
 	if err != nil {
 		return err
 	}
@@ -108,18 +116,17 @@ func execute(ctx context.Context, stack []command) error {
 
 	var (
 		this = stack[0]
-		args = this.fs.Args()
 		err  error
 	)
 
 	// run init (if applicable)
-	if err := this.initializeFn(ctx, args); err != nil {
+	if err := this.onInit(ctx); err != nil {
 		return err
 	}
 
-	// if this is a leaf, run Run(), otherwise recurse
+	// if this is a leaf, run, otherwise recurse
 	if len(stack) == 1 {
-		err = this.Run(ctx, args)
+		err = this.run(ctx)
 	} else {
 		err = execute(ctx, stack[1:])
 	}
@@ -128,7 +135,7 @@ func execute(ctx context.Context, stack []command) error {
 	}
 
 	// run destroy (if applicable)
-	if err := this.destroyFn(ctx, args); err != nil {
+	if err := this.onDestroy(ctx); err != nil {
 		return err
 	}
 
@@ -139,43 +146,78 @@ func execute(ctx context.Context, stack []command) error {
 type command struct {
 	Command
 
-	fs           *getopt.PosixFlagSet
-	initializeFn func(context.Context, []string) error
-	destroyFn    func(context.Context, []string) error
-	showHelp     bool
+	fs       *flag.FlagSet
+	args     []string
+	showHelp bool
+}
+
+// onInit calls the [RunnableLifecycle] init routine if present on c.
+func (c command) onInit(ctx context.Context) error {
+	if cmd, ok := c.Command.(RunnableLifecycle); ok {
+		return cmd.Initialize(ctx, c.args)
+	}
+
+	return nil
+}
+
+// run calls the [Runnable] run routine of c.
+func (c command) run(ctx context.Context) error {
+	return c.Run(ctx, c.args)
+}
+
+// onDestroy calls the [RunnableLifecycle] destroy routine if present on c.
+func (c command) onDestroy(ctx context.Context) error {
+	if cmd, ok := c.Command.(RunnableLifecycle); ok {
+		return cmd.Destroy(ctx, c.args)
+	}
+
+	return nil
 }
 
 // buildCallStack builds a slice representing the command call stack. The first element in the slice is the root
 // command and the last is the leaf command.
-func buildCallStack(cmd Command, args []string) ([]command, error) {
+func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 	var stack []command
+
+	var args = ops.args
 
 	for cmd != nil {
 		this := command{
-			Command:      cmd,
-			fs:           getopt.NewPosixFlagSet(cmd.Name(), flag.ContinueOnError),
-			initializeFn: func(context.Context, []string) error { return nil },
-			destroyFn:    func(context.Context, []string) error { return nil },
+			Command: cmd,
+			fs:      flag.NewFlagSet(cmd.Name(), flag.ContinueOnError),
 		}
 
 		// add help flags
 		this.fs.BoolVar(&this.showHelp, "h", false, "show command help and usage information")
 		this.fs.BoolVar(&this.showHelp, "help", false, "show command help and usage information")
 
-		if l, ok := cmd.(RunnableLifecycle); ok {
-			this.initializeFn = l.Initialize
-			this.destroyFn = l.Destroy
-		}
-
 		if c, ok := cmd.(FlagInitializer); ok {
-			c.InitializeFlags(this.fs.FlagSet)
+			c.InitializeFlags(this.fs)
 		}
 
-		if err := this.fs.Parse(args); err != nil {
-			return nil, err
+		// bind environment variables
+		if ops.bindEnv {
+			if err := bindEnvironmentFlags(stack, this, ops); err != nil {
+				return nil, err
+			}
 		}
 
-		args = this.fs.Args()
+		if ops.nativeFlags {
+			if err := this.fs.Parse(args); err != nil {
+				return nil, err
+			}
+
+			this.args = this.fs.Args()
+		} else {
+			pfs := &getopt.PosixFlagSet{FlagSet: this.fs}
+			if err := pfs.Parse(args); err != nil {
+				return nil, err
+			}
+
+			this.args = pfs.Args()
+		}
+
+		args = this.args
 
 		if len(args) == 0 {
 			// if no subcommand name given, stop here
@@ -193,6 +235,45 @@ func buildCallStack(cmd Command, args []string) ([]command, error) {
 	}
 
 	return stack, nil
+}
+
+// bindEnvironmentFlags sets flag values from matching environment variables.
+func bindEnvironmentFlags(stack []command, cmd command, ops *ExecuteOptions) error {
+	var components []string
+
+	for _, c := range stack {
+		components = append(components, c.Name())
+	}
+
+	components = append(components, cmd.Name())
+
+	var flags []*flag.Flag
+	cmd.fs.VisitAll(func(f *flag.Flag) {
+		flags = append(flags, f)
+	})
+
+	for _, flag := range flags {
+		variable := ops.bindEnvPrefix + formatEnvvar(append(components, flag.Name))
+
+		if value, ok := os.LookupEnv(variable); ok {
+			if err := flag.Value.Set(value); err != nil {
+				return errors.Join(ErrEnvironmentBindFailure, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// formatEnvvar generates an environment variable name which maps to the given flag path.
+func formatEnvvar(flagpath []string) string {
+	reg := regexp.MustCompile("[^a-zA-Z0-9]+")
+
+	for i, v := range flagpath {
+		flagpath[i] = strings.ToUpper(reg.ReplaceAllString(v, ""))
+	}
+
+	return strings.Join(flagpath, "_")
 }
 
 // helpRequested traverses the command stack and returns whether help text was requested with '-h' or '--help' flags,
