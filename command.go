@@ -119,6 +119,14 @@ type Documented interface {
 	Hidden() bool
 }
 
+// Compile-time checks.
+var (
+	_ Command           = &BaseCommand{}
+	_ RunnableLifecycle = &BaseCommand{}
+	_ RootCommand       = &BaseCommand{}
+	_ FlagInitializer   = &BaseCommand{}
+)
+
 // BaseCommand is an implementation of the [Command], [RunnableLifecycle], [RootCommand] and [FlagInitializer]
 // interfaces and may be embedded in your command types to reduce boilerplate.
 type BaseCommand struct {
