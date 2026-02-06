@@ -59,6 +59,9 @@ Flags:
   -t <key=value>, --arg=<key=value> (default k=v)
       render template with arguments (key=value)
 
+  -r <value>, --hosts=<value> (default hello,world)
+      specify remote hosts (e.g. tcp://127.0.0.1)
+
   --reconnect-interval=<duration> (default 1m0s)
       interval between connection attempts (e.g. 1m)
 
@@ -82,8 +85,12 @@ const ExpectedStdFlagUsageTemplate = `usage: test [flags] [args]
     	address and port of the device (e.g. 192.168.1.1:4567)
   -arg key=value
     	render template with arguments (key=value) (default k=v)
+  -hosts value
+    	specify remote hosts (e.g. tcp://127.0.0.1) (default hello,world)
   -poll-interval value
     	attempt to poll the device status more frequently than advertised (default 0s)
+  -r value
+    	specify remote hosts (e.g. tcp://127.0.0.1) (default hello,world)
   -reconnect-interval duration
     	interval between connection attempts (e.g. 1m) (default 1m0s)
   -s serial
@@ -119,6 +126,9 @@ func TestUsage(t *testing.T) {
 
 	cmd.fs.Var(getopt.MapVar{"k": "v"}, "arg", "render template with arguments (`key=value`)")
 	cmd.fs.Var(alias(cmd.fs.Lookup("arg"), "t"))
+
+	cmd.fs.Var(&getopt.StringsVar{"hello", "world"}, "hosts", "specify remote hosts (e.g. tcp://127.0.0.1)")
+	cmd.fs.Var(alias(cmd.fs.Lookup("hosts"), "r"))
 
 	cmd.fs.Duration("poll-interval", time.Duration(0), "attempt to poll the device status more frequently than advertised")
 	getopt.Hide(cmd.fs.Lookup("poll-interval"))
@@ -531,7 +541,7 @@ func TestFlags(t *testing.T) {
 		}
 	})
 
-	t.Run("should not group func flags which are not comparable", func(t *testing.T) {
+	t.Run("should group func flags", func(t *testing.T) {
 		fn1 := func(v string) error {
 			return nil
 		}
@@ -546,8 +556,36 @@ func TestFlags(t *testing.T) {
 		cmd.fs.Var(alias(cmd.fs.Lookup("optimize"), "O"))
 
 		groups := flags(cmd)
-		if len(groups) != 4 {
+		if len(groups) != 2 {
 			t.Fatalf("unexpected number of flag groups: %v", groups)
+		}
+
+		group, ok := groups["verbose"]
+		if !ok {
+			t.Fatalf("no group found")
+		}
+		if len(group) != 2 {
+			t.Fatalf("unexpected number of flag groups: %v", group)
+		}
+		if group[0].Name != "v" {
+			t.Fatalf("unexpected sort order in flag group")
+		}
+		if group[1].Name != "verbose" {
+			t.Fatalf("unexpected sort order in flag group")
+		}
+
+		group, ok = groups["optimize"]
+		if !ok {
+			t.Fatalf("no group found")
+		}
+		if len(group) != 2 {
+			t.Fatalf("unexpected number of flag groups: %v", group)
+		}
+		if group[0].Name != "O" {
+			t.Fatalf("unexpected sort order in flag group")
+		}
+		if group[1].Name != "optimize" {
+			t.Fatalf("unexpected sort order in flag group")
 		}
 	})
 }
