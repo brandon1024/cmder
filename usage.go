@@ -191,7 +191,7 @@ func areSame(f1, f2 flag.Value) bool {
 		return false
 	}
 
-	if !slices.Contains([]reflect.Kind{reflect.Map, reflect.Pointer, reflect.Slice}, ref1.Kind()) {
+	if !slices.Contains([]reflect.Kind{reflect.Map, reflect.Pointer, reflect.Func, reflect.Slice}, ref1.Kind()) {
 		return false
 	}
 

@@ -32,7 +32,7 @@ func (s StringsVar) String() string {
 		panic(err)
 	}
 
-	return builder.String()
+	return strings.TrimSuffix(builder.String(), "\n")
 }
 
 // Set fulfills the [flag.Value] interface.

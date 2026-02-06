@@ -5,7 +5,7 @@ import (
 )
 
 // TimeVar is a [flag.Value] for flags that accept timestamps in [time.RFC3339] format. TimeVar also implements
-// [Flag.Getter].
+// [flag.Getter].
 type TimeVar time.Time
 
 // String returns the [time.RFC3339] representation of the timestamp flag.
