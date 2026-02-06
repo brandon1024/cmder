@@ -6,13 +6,10 @@ import (
 	"flag"
 	"io"
 	"os"
-	"reflect"
 	"slices"
 	"strings"
 	"text/template"
 	"time"
-
-	"github.com/brandon1024/cmder/getopt"
 )
 
 // Text template for rendering command usage information in a format similar to that of the popular
@@ -177,27 +174,6 @@ func flags(cmd command) map[string][]*flag.Flag {
 	return groups
 }
 
-func areSame(f1, f2 flag.Value) bool {
-	var (
-		ref1 = reflect.ValueOf(f1)
-		ref2 = reflect.ValueOf(f2)
-	)
-
-	if ref1.Comparable() && ref2.Comparable() && f1 == f2 {
-		return true
-	}
-
-	if ref1.Kind() != ref2.Kind() {
-		return false
-	}
-
-	if !slices.Contains([]reflect.Kind{reflect.Map, reflect.Pointer, reflect.Func, reflect.Slice}, ref1.Kind()) {
-		return false
-	}
-
-	return ref1.Pointer() == ref2.Pointer()
-}
-
 // flagUsage dumps the flag usage as rendered by the flag library. See [flag.FlagSet.PrintDefaults].
 func flagUsage(cmd command) string {
 	out := cmd.fs.Output()
@@ -238,21 +214,4 @@ func unquote(flg *flag.Flag) []string {
 	}
 
 	return []string{name, usage}
-}
-
-// isHiddenFlag checks if the given flag is hidden.
-func isHiddenFlag(flg *flag.Flag) bool {
-	hf, ok := flg.Value.(getopt.HiddenFlag)
-	return ok && hf.IsHiddenFlag()
-}
-
-type boolFlag interface {
-	flag.Value
-	IsBoolFlag() bool
-}
-
-// isBoolFlag checks if the given flag is a boolean flag.
-func isBoolFlag(flg *flag.Flag) bool {
-	hf, ok := flg.Value.(boolFlag)
-	return ok && hf.IsBoolFlag()
 }

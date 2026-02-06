@@ -21,12 +21,11 @@ arguments always take precedence over environment variables.
 const BindEnvExamples = `
 # print all default flag values
 bind-env show
+> default 10
 
 # print flag values from environment
-bind-env show
-
-# print flag values from environment
-bind-env show --
+BINDENV_SHOW_FORMAT=pretty BINDENV_SHOW_PAGECOUNT=20 bind-env show --page-count=15
+> pretty 15
 `
 
 func GetCommand() *cmder.BaseCommand {

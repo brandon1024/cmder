@@ -68,7 +68,7 @@ func run(ctx context.Context, args []string) error {
 }
 
 func main() {
-	cmd := cmder.BaseCommand{
+	cmd := &cmder.BaseCommand{
 		CommandName: "hello-world",
 		Usage:       "hello-world [<args>...]",
 		ShortHelp:   "Simple demonstration of cmder",

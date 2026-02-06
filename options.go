@@ -6,6 +6,7 @@ type ExecuteOptions struct {
 	nativeFlags   bool
 	bindEnv       bool
 	bindEnvPrefix string
+	interspersed  bool
 }
 
 // A single option passed to [Execute].
@@ -55,5 +56,19 @@ func WithPrefixedEnvironmentBinding(prefix string) ExecuteOption {
 	return func(ops *ExecuteOptions) {
 		ops.bindEnv = true
 		ops.bindEnvPrefix = prefix
+	}
+}
+
+// WithInterspersedArgs enables interspersed args parsing, allowing command-line arguments and flags to be mixed. When
+// interspersed arg parsing is enabled, the following is permitted:
+//
+//	git log origin/main -p
+//
+// When interspersed arg parsing is disabled, flags must always come before args:
+//
+//	git log -p origin/main
+func WithInterspersedArgs() ExecuteOption {
+	return func(ops *ExecuteOptions) {
+		ops.interspersed = true
 	}
 }

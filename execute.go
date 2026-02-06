@@ -67,7 +67,8 @@ var (
 // configured automatically and must not be set by the application.
 //
 // Execute parses getopt-style (GNU/POSIX) command-line arguments with the help of package [getopt]. To use the standard
-// [flag] syntax instead, see [WithNativeFlags].
+// [flag] syntax instead, see [WithNativeFlags]. Flags and arguments cannot be interspersed by default. You can change
+// this behaviour with [WithInterspersedArgs].
 //
 // To bind environment variables to flags, see [WithEnvironmentBinding].
 //
@@ -179,7 +180,10 @@ func (c command) onDestroy(ctx context.Context) error {
 func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 	var stack []command
 
-	var args = ops.args
+	var (
+		args = ops.args
+		err  error
+	)
 
 	for cmd != nil {
 		this := command{
@@ -202,19 +206,9 @@ func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 			}
 		}
 
-		if ops.nativeFlags {
-			if err := this.fs.Parse(args); err != nil {
-				return nil, err
-			}
-
-			this.args = this.fs.Args()
-		} else {
-			pfs := &getopt.PosixFlagSet{FlagSet: this.fs}
-			if err := pfs.Parse(args); err != nil {
-				return nil, err
-			}
-
-			this.args = pfs.Args()
+		this.args, err = parseArgs(this, args, ops)
+		if err != nil {
+			return nil, err
 		}
 
 		args = this.args
@@ -235,6 +229,42 @@ func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 	}
 
 	return stack, nil
+}
+
+// parseArgs processes args for the given command, returning the unparsed (remaining) arguments.
+func parseArgs(cmd command, args []string, ops *ExecuteOptions) ([]string, error) {
+	var fp flagParser = &getopt.PosixFlagSet{FlagSet: cmd.fs}
+
+	if ops.nativeFlags {
+		fp = cmd.fs
+	}
+
+	// interspersed args only possible for leaf commands
+	interspersed := ops.interspersed
+	if len(collectSubcommands(cmd.Command)) > 0 {
+		interspersed = false
+	}
+
+	var processed []string
+
+	for len(args) > 0 {
+		if err := fp.Parse(args); err != nil {
+			return nil, err
+		}
+
+		args = fp.Args()
+
+		if !interspersed {
+			return args, nil
+		}
+
+		if len(args) > 0 {
+			processed = append(processed, args[0])
+			args = args[1:]
+		}
+	}
+
+	return processed, nil
 }
 
 // bindEnvironmentFlags sets flag values from matching environment variables.
