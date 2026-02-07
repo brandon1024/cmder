@@ -22,7 +22,7 @@ type Command interface {
 	// rendering usage and help texts.
 	Documented
 
-	// Name returns the name of this command.
+	// Name returns the name of this command or subcommand.
 	Name() string
 }
 
@@ -113,7 +113,10 @@ type Documented interface {
 
 	// ExampleText returns motivating usage examples for your command.
 	ExampleText() string
+}
 
+// HiddenCommand is implemented by commands which are not user facing. Hidden commands are not displayed in help texts.
+type HiddenCommand interface {
 	// Hidden returns a flag indicating whether to mark this command as hidden, preventing it from being rendered in
 	// help output.
 	Hidden() bool

@@ -80,10 +80,6 @@ func (c *HelloCommand) ExampleText() string {
 	return HelloCommandExamples
 }
 
-func (c *HelloCommand) Hidden() bool {
-	return false
-}
-
 func (c *HelloCommand) Subcommands() []cmder.Command {
 	return c.subcommands
 }

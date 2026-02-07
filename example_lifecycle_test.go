@@ -58,10 +58,6 @@ func (c *LifecycleCommand) ExampleText() string {
 	return LifecycleCommandExamples
 }
 
-func (c *LifecycleCommand) Hidden() bool {
-	return false
-}
-
 func ExampleRunnableLifecycle() {
 	args := []string{}
 

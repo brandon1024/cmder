@@ -48,10 +48,6 @@ func (c *HelloWorldCommand) ExampleText() string {
 	return HelloWorldCommandExamples
 }
 
-func (c *HelloWorldCommand) Hidden() bool {
-	return false
-}
-
 func ExampleCommand() {
 	args := []string{"from", "cmder"}
 	cmd := &HelloWorldCommand{}
