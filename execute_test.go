@@ -3,8 +3,6 @@ package cmder
 import (
 	"context"
 	"flag"
-	"fmt"
-	"slices"
 	"testing"
 )
 
@@ -88,27 +86,4 @@ func TestExecute(t *testing.T) {
 			assert(t, match([]string{"000", "--l2f1", "25", "111", "--", "--l2f0=255"}, result))
 		})
 	})
-}
-
-type result struct {
-	res bool
-	msg string
-}
-
-func assert(t *testing.T, res result) {
-	if !res.res {
-		t.Fatalf("expectation failed: %s", res.msg)
-	}
-}
-
-func eq[T comparable](expected, actual T) result {
-	return result{expected == actual, fmt.Sprintf("values not equal: expected %v but was %v", expected, actual)}
-}
-
-func nilerr(err error) result {
-	return result{err == nil, fmt.Sprintf("unexpected error: %v", err)}
-}
-
-func match[S ~[]E, E comparable](expected, actual S) result {
-	return result{slices.Equal(expected, actual), fmt.Sprintf("slices not equal: expected %v but was %v", expected, actual)}
 }

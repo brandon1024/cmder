@@ -90,7 +90,8 @@ func (c *ServerCommand) InitializeFlags(fs *flag.FlagSet) {
 
 func (c *ServerCommand) Initialize(ctx context.Context, args []string) error {
 	if len(args) != 0 {
-		return fmt.Errorf("too many arguments: %v", args)
+		fmt.Fprintf(os.Stderr, "error: too many arguments: %v\n", args)
+		return cmder.ErrShowUsage
 	}
 
 	if !c.noAuth && c.basicAuth == "" {
@@ -159,10 +160,6 @@ func (c *ServerCommand) HelpText() string {
 
 func (c *ServerCommand) ExampleText() string {
 	return ServerCommandExamples
-}
-
-func (c *ServerCommand) Hidden() bool {
-	return false
 }
 
 func main() {

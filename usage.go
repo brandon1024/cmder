@@ -23,7 +23,7 @@ Examples:
 {{ range (lines (trim .Command.ExampleText)) }}  {{ . }}{{ end }}
 {{- println -}}
 
-{{- with (commands .Command) -}}
+{{- with (commands .) -}}
 	{{- println -}}
 	{{- println "Available Commands:" -}}
 	{{- range . -}}
@@ -75,7 +75,7 @@ Examples:
 	{{- end -}}
 {{- end -}}
 
-{{- if (commands .Command) -}}
+{{- if (commands .) -}}
 	{{- println -}}
 	{{- printf "Use \"%s [command] --help\" for more information about a command.\n" .Command.Name -}}
 {{- end -}}`
@@ -91,11 +91,14 @@ var UsageTemplate = CobraUsageTemplate
 // (particularly useful in tests).
 var UsageOutputWriter io.Writer = os.Stderr
 
+// ErrShowUsage instructs cmder to render usage and exit.
+var ErrShowUsage = flag.ErrHelp
+
 // usage renders usage text for a [Command] using the default template [UsageTemplate]. Output is written to
 // [UsageOutputWriter].
 func usage(cmd command) error {
 	tmpl, err := template.New("usage").Funcs(template.FuncMap{
-		"commands":  collectSubcommands,
+		"commands":  subcommands,
 		"flags":     flags,
 		"flagusage": flagUsage,
 		"unquote":   unquote,
@@ -113,6 +116,19 @@ func usage(cmd command) error {
 	}
 
 	return tmpl.Execute(UsageOutputWriter, cmd)
+}
+
+// subcommands returns a map of (visible) child subcommands for cmd.
+func subcommands(cmd command) map[string]Command {
+	subcommands := map[string]Command{}
+
+	for name, c := range collectSubcommands(cmd.Command) {
+		if hidden, ok := c.(HiddenCommand); !ok || !hidden.Hidden() {
+			subcommands[name] = c
+		}
+	}
+
+	return subcommands
 }
 
 // flags organizes the flags of cmd and returns them.

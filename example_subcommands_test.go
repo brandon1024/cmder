@@ -81,10 +81,6 @@ func (c *ParentCommand) ExampleText() string {
 	return ParentCommandExamples
 }
 
-func (c *ParentCommand) Hidden() bool {
-	return false
-}
-
 func (c *ParentCommand) Subcommands() []cmder.Command {
 	return c.subcommands
 }
@@ -142,10 +138,6 @@ func (c *ChildCommand) HelpText() string {
 
 func (c *ChildCommand) ExampleText() string {
 	return ChildCommandExamples
-}
-
-func (c *ChildCommand) Hidden() bool {
-	return false
 }
 
 // === EXAMPLE ===

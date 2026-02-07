@@ -57,7 +57,3 @@ func (c *WorldCommand) HelpText() string {
 func (c *WorldCommand) ExampleText() string {
 	return WorldCommandExamples
 }
-
-func (c *WorldCommand) Hidden() bool {
-	return false
-}

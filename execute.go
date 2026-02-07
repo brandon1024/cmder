@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -18,7 +19,7 @@ var (
 	// Returned when an [ExecuteOption] provided to [Execute] is illegal.
 	ErrIllegalExecuteOptions = errors.New("cmder: illegal command execution option")
 
-	// Returned when an [ExecuteOption] provided to [Execute] is illegal.
+	// Returned when failed to update flag value from environment variable.
 	ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from environment variable")
 )
 
@@ -77,6 +78,9 @@ var (
 // Whenever the user provides the '-h' or '--help' flag at the command line, [Execute] will display command usage and
 // exit. The format of the help text can be adjusted by configuring [UsageTemplate]. By default, usage information will
 // be written to stderr, but this can be adjusted by setting [UsageOutputWriter].
+//
+// If a command's [Run] routine returns [ErrShowUsage] (or an error wrapping [ErrShowUsage]), [Execute] will render
+// help text and exit with status 2.
 func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 	// do some checks
 	if cmd == nil {
@@ -154,25 +158,45 @@ type command struct {
 
 // onInit calls the [RunnableLifecycle] init routine if present on c.
 func (c command) onInit(ctx context.Context) error {
+	var err error
+
 	if cmd, ok := c.Command.(RunnableLifecycle); ok {
-		return cmd.Initialize(ctx, c.args)
+		err = cmd.Initialize(ctx, c.args)
 	}
 
-	return nil
+	if errors.Is(err, ErrShowUsage) {
+		_ = usage(c)
+		os.Exit(2)
+	}
+
+	return err
 }
 
 // run calls the [Runnable] run routine of c.
 func (c command) run(ctx context.Context) error {
-	return c.Run(ctx, c.args)
+	err := c.Run(ctx, c.args)
+	if errors.Is(err, ErrShowUsage) {
+		_ = usage(c)
+		os.Exit(2)
+	}
+
+	return err
 }
 
 // onDestroy calls the [RunnableLifecycle] destroy routine if present on c.
 func (c command) onDestroy(ctx context.Context) error {
+	var err error
+
 	if cmd, ok := c.Command.(RunnableLifecycle); ok {
-		return cmd.Destroy(ctx, c.args)
+		err = cmd.Destroy(ctx, c.args)
 	}
 
-	return nil
+	if errors.Is(err, ErrShowUsage) {
+		_ = usage(c)
+		os.Exit(2)
+	}
+
+	return err
 }
 
 // buildCallStack builds a slice representing the command call stack. The first element in the slice is the root
@@ -287,7 +311,11 @@ func bindEnvironmentFlags(stack []command, cmd command, ops *ExecuteOptions) err
 
 		if value, ok := os.LookupEnv(variable); ok {
 			if err := flag.Value.Set(value); err != nil {
-				return errors.Join(ErrEnvironmentBindFailure, err)
+				return errors.Join(
+					ErrEnvironmentBindFailure,
+					fmt.Errorf("cmder: failed to set flag %s from variable %s", flag.Name, variable),
+					err,
+				)
 			}
 		}
 	}
