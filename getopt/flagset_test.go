@@ -334,6 +334,49 @@ func TestPosixFlagSet(t *testing.T) {
 			}
 		})
 
+		t.Run("should not mistaken a single - for a flag", func(t *testing.T) {
+			var (
+				output string
+				count  uint
+				b1     bool
+				b2     bool
+			)
+
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
+			fs.StringVar(&output, "o", "-", "output file")
+			fs.UintVar(&count, "c", 12, "number of results")
+			fs.BoolVar(&b1, "O", false, "assume output file")
+			fs.BoolVar(&b2, "C", false, "assume count of results")
+
+			err := fs.Parse([]string{"-OC", "-otest.out", "-", "-c0x12"})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if fs.NArg() != 2 {
+				t.Fatalf("unexpected number of unparsed args: %d", fs.NArg())
+			}
+			if a := fs.Args()[0]; a != "-" {
+				t.Fatalf("unexpected unparsed arg: %s", a)
+			}
+			if a := fs.Args()[1]; a != "-c0x12" {
+				t.Fatalf("unexpected unparsed arg: %s", a)
+			}
+
+			if b1 != true {
+				t.Fatalf("b1 var not updated with expected value: %v", b1)
+			}
+			if b2 != true {
+				t.Fatalf("b2 var not updated with expected value: %v", b2)
+			}
+			if output != "test.out" {
+				t.Fatalf("output var not updated with expected value: %s", output)
+			}
+			if count != 12 {
+				t.Fatalf("count var not updated with expected value: %d", count)
+			}
+		})
+
 		t.Run("should halt with an error when unrecognized flag found", func(t *testing.T) {
 			var (
 				output string

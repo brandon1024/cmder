@@ -7,6 +7,18 @@ import (
 	"github.com/brandon1024/cmder"
 )
 
+func ExampleCommand() {
+	cmd := &HelloWorldCommand{}
+
+	args := []string{"from", "cmder"}
+
+	if err := cmder.Execute(context.Background(), cmd, cmder.WithArgs(args)); err != nil {
+		fmt.Printf("unexpected error occurred: %v", err)
+	}
+	// Output:
+	// hello-world: [from cmder]
+}
+
 const HelloWorldCommandUsageLine = `hello-world [<args>...]`
 
 const HelloWorldCommandShortHelpText = `Simple demonstration of cmder`
@@ -46,16 +58,4 @@ func (c *HelloWorldCommand) HelpText() string {
 
 func (c *HelloWorldCommand) ExampleText() string {
 	return HelloWorldCommandExamples
-}
-
-func ExampleCommand() {
-	args := []string{"from", "cmder"}
-	cmd := &HelloWorldCommand{}
-
-	if err := cmder.Execute(context.Background(), cmd, cmder.WithArgs(args)); err != nil {
-		fmt.Printf("unexpected error occurred: %v", err)
-	}
-
-	// Output:
-	// hello-world: [from cmder]
 }

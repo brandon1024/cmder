@@ -84,7 +84,8 @@ type RootCommand interface {
 
 // Documented is implemented by all commands and provides help and usage information for your users.
 type Documented interface {
-	// UsageLine returns the usage line for your command. Generally, usage lines have a well accepted format:
+	// UsageLine returns the usage line for your command. This is akin to the "SYNOPSIS" section you would typically
+	// find in a man page. Generally, usage lines have a well accepted format:
 	//
 	//	- [ ] identifies an optional argument or flag. Arguments that are not enclosed in brackets are required.
 	//	- ... identifies arguments or flags that can be provided more than once.
@@ -99,12 +100,18 @@ type Documented interface {
 	//	crane index filter [flags]
 	UsageLine() string
 
-	// ShortHelpText returns a short-and-sweet one-line description of your command. This is mainly used to summarize
-	// available subcommands.
+	// ShortHelpText returns a short-and-sweet one-line description of your command. This is akin to the "NAME" section
+	// you would typically find in a man page. This is mainly used to summarize available subcommands.
+	//
+	// Here are a few examples:
+	//
+	//	get image registry and namespace information
+	//	download installation files for an application version
+	//	display the contents of a file in a terminal
 	ShortHelpText() string
 
-	// HelpText returns long usage and help information for your users about this subcommand. Here you can describe the
-	// behaviour of your command, summarize usage of certain flags and arguments and provide hints on where to find
+	// HelpText returns longer usage and help information for your users about this subcommand. Here you can describe
+	// the behaviour of your command, summarize usage of certain flags and arguments and provide hints on where to find
 	// additional information. This is akin to the "DESCRIPTION" section you would typically find in a man page.
 	//
 	// For a better viewing experience in terminals, consider maintaining consistent line length limits (120 is a good
@@ -128,11 +135,68 @@ var (
 	_ RunnableLifecycle = &BaseCommand{}
 	_ RootCommand       = &BaseCommand{}
 	_ FlagInitializer   = &BaseCommand{}
+	_ Documented        = &CommandDocumentation{}
+	_ HiddenCommand     = &CommandDocumentation{}
 )
+
+// CommandDocumentation implements [Documented] and can be embdded in command types to reduce boilerplate.
+type CommandDocumentation struct {
+	// The usage line. See UsageLine() in [Documented].
+	Usage string
+
+	// The short help line. See ShortHelpText() in [Documented].
+	ShortHelp string
+
+	// Documentation for your command. See HelpText() in [Documented].
+	Help string
+
+	// Usage examples for your command. See ExampleText() in [Documented].
+	Examples string
+
+	// Whether this command is hidden in help and usage texts. See Hidden() in [HiddenCommand].
+	IsHidden bool
+}
+
+// UsageLine returns [CommandDocumentation] Usage.
+//
+// See [Documented].
+func (d CommandDocumentation) UsageLine() string {
+	return d.Usage
+}
+
+// ShortHelpText returns [CommandDocumentation] ShortHelp.
+//
+// See [Documented].
+func (d CommandDocumentation) ShortHelpText() string {
+	return d.ShortHelp
+}
+
+// HelpText returns [CommandDocumentation] Help.
+//
+// See [Documented].
+func (d CommandDocumentation) HelpText() string {
+	return d.Help
+}
+
+// ExampleText returns [CommandDocumentation] Examples.
+//
+// See [Documented].
+func (d CommandDocumentation) ExampleText() string {
+	return d.Examples
+}
+
+// Hidden returns [CommandDocumentation] Hidden.
+//
+// See [HiddenCommand].
+func (d CommandDocumentation) Hidden() bool {
+	return d.IsHidden
+}
 
 // BaseCommand is an implementation of the [Command], [RunnableLifecycle], [RootCommand] and [FlagInitializer]
 // interfaces and may be embedded in your command types to reduce boilerplate.
 type BaseCommand struct {
+	CommandDocumentation
+
 	// The command name. See Name() in [Command].
 	CommandName string
 
@@ -150,21 +214,6 @@ type BaseCommand struct {
 
 	// Subcommands for this command, if applicable. See [RootCommand].
 	Children []Command
-
-	// The usage line. See UsageLine() in [Documented].
-	Usage string
-
-	// The short help line. See ShortHelpText() in [Documented].
-	ShortHelp string
-
-	// Documentation for your command. See HelpText() in [Documented].
-	Help string
-
-	// Usage examples for your command. See ExampleText() in [Documented].
-	Examples string
-
-	// Whether this command is hidden in help and usage texts. See Hidden() in [Documented].
-	IsHidden bool
 }
 
 // Name returns [BaseCommand] CommandName.
@@ -221,39 +270,4 @@ func (c BaseCommand) Destroy(ctx context.Context, args []string) error {
 // See [RootCommand].
 func (c BaseCommand) Subcommands() []Command {
 	return c.Children
-}
-
-// UsageLine returns [BaseCommand] Usage.
-//
-// See [Documented].
-func (c BaseCommand) UsageLine() string {
-	return c.Usage
-}
-
-// ShortHelpText returns [BaseCommand] ShortHelp.
-//
-// See [Documented].
-func (c BaseCommand) ShortHelpText() string {
-	return c.ShortHelp
-}
-
-// HelpText returns [BaseCommand] Help.
-//
-// See [Documented].
-func (c BaseCommand) HelpText() string {
-	return c.Help
-}
-
-// ExampleText returns [BaseCommand] Examples.
-//
-// See [Documented].
-func (c BaseCommand) ExampleText() string {
-	return c.Examples
-}
-
-// Hidden returns [BaseCommand] Hidden.
-//
-// See [Documented].
-func (c BaseCommand) Hidden() bool {
-	return c.IsHidden
 }

@@ -1,6 +1,6 @@
 package cmder
 
-// Options used to configure behaviour of [Execute].
+// ExecuteOptions configure the behaviour of [Execute].
 type ExecuteOptions struct {
 	args          []string
 	nativeFlags   bool
@@ -9,7 +9,7 @@ type ExecuteOptions struct {
 	interspersed  bool
 }
 
-// A single option passed to [Execute].
+// ExecuteOption is a single option passed to [Execute].
 type ExecuteOption func(*ExecuteOptions)
 
 // WithArgs configures [Execute] to run with the arguments given. By default, [Execute] will execute with arguments from

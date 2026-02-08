@@ -13,13 +13,11 @@ import (
 )
 
 var (
-	// Returned when a [Command] provided to [Execute] is illegal.
+	// ErrIllegalCommandConfiguration is an error returned when a [Command] provided to [Execute] is illegal.
 	ErrIllegalCommandConfiguration = errors.New("cmder: illegal command configuration")
 
-	// Returned when an [ExecuteOption] provided to [Execute] is illegal.
-	ErrIllegalExecuteOptions = errors.New("cmder: illegal command execution option")
-
-	// Returned when failed to update flag value from environment variable.
+	// ErrEnvironmentBindFailure is an error returned when [Execute] failed to update flag value from environment
+	// variable (see [WithEnvironmentBinding]).
 	ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from environment variable")
 )
 
@@ -49,8 +47,7 @@ var (
 // immediately and the error is returned at once. For example, returning an error from Run() will prevent execution of
 // Destroy() of the current command and any parents.
 //
-// Execute may return [ErrIllegalCommandConfiguration] or [ErrIllegalExecuteOptions] if a command is misconfigured or
-// options are invalid.
+// Execute may return [ErrIllegalCommandConfiguration] if a command is misconfigured.
 //
 // # Command Contexts
 //

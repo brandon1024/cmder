@@ -3,11 +3,13 @@ package cmder
 import (
 	"bytes"
 	"flag"
+	"os"
 	"testing"
 	"time"
 
-	"github.com/brandon1024/cmder/getopt"
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/brandon1024/cmder/getopt"
 )
 
 const desc = `cmder - build powerful command-line applications in Go
@@ -115,26 +117,32 @@ const ExpectedStdFlagUsageTemplate = `usage: test [subcommands] [flags] [args]
 func TestUsage(t *testing.T) {
 	child1 := &BaseCommand{
 		CommandName: "child-1",
-		Usage:       "child-1 [flags] [args]",
-		ShortHelp:   "First child subcommand for parent",
-		Help:        desc,
-		Examples:    examples,
+		CommandDocumentation: CommandDocumentation{
+			Usage:     "child-1 [flags] [args]",
+			ShortHelp: "First child subcommand for parent",
+			Help:      desc,
+			Examples:  examples,
+		},
 	}
 	child2 := &BaseCommand{
 		CommandName: "child-2",
-		Usage:       "child-2 [flags] [args]",
-		ShortHelp:   "Second child subcommand for parent",
-		Help:        desc,
-		Examples:    examples,
+		CommandDocumentation: CommandDocumentation{
+			Usage:     "child-2 [flags] [args]",
+			ShortHelp: "Second child subcommand for parent",
+			Help:      desc,
+			Examples:  examples,
+		},
 	}
 
 	parent := &BaseCommand{
 		CommandName: "test",
-		Usage:       "test [subcommands] [flags] [args]",
-		ShortHelp:   "Usage text generation test",
-		Help:        desc,
-		Examples:    examples,
-		Children:    []Command{child1, child2},
+		CommandDocumentation: CommandDocumentation{
+			Usage:     "test [subcommands] [flags] [args]",
+			ShortHelp: "Usage text generation test",
+			Help:      desc,
+			Examples:  examples,
+		},
+		Children: []Command{child1, child2},
 	}
 
 	cmd := command{
@@ -161,6 +169,11 @@ func TestUsage(t *testing.T) {
 	cmd.fs.String("web.telemetry-path", "/metrics", "path under which to expose metrics")
 	cmd.fs.Bool("web.disable-exporter-metrics", false, "exclude metrics about the exporter itself (go_*)")
 
+	t.Cleanup(func() {
+		UsageOutputWriter = os.Stderr
+		UsageTemplate = CobraUsageTemplate
+	})
+
 	t.Run("CobraUsageTemplate", func(t *testing.T) {
 		t.Run("should render correctly", func(t *testing.T) {
 			var buf bytes.Buffer
@@ -178,11 +191,13 @@ func TestUsage(t *testing.T) {
 		t.Run("should not render hidden subcommands", func(t *testing.T) {
 			parent.Children = append(parent.Children, &BaseCommand{
 				CommandName: "child-3",
-				Usage:       "child-3 [flags] [args]",
-				ShortHelp:   "Third (hidden) child subcommand for parent",
-				Help:        desc,
-				Examples:    examples,
-				IsHidden:    true,
+				CommandDocumentation: CommandDocumentation{
+					Usage:     "child-3 [flags] [args]",
+					ShortHelp: "Third (hidden) child subcommand for parent",
+					Help:      desc,
+					Examples:  examples,
+					IsHidden:  true,
+				},
 			})
 
 			var buf bytes.Buffer
@@ -218,10 +233,6 @@ func TestFlags(t *testing.T) {
 	cmd := command{
 		Command: &BaseCommand{
 			CommandName: "test",
-			Usage:       "test [flags] [args]",
-			ShortHelp:   "Usage text generation test",
-			Help:        desc,
-			Examples:    examples,
 		},
 	}
 

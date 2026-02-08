@@ -9,9 +9,24 @@ import (
 	"github.com/brandon1024/cmder"
 )
 
-const BindEnvUsageLine = `bind-env [subcommand] [flags]`
+func ExampleWithEnvironmentBinding() {
+	_ = os.Setenv("BINDENV_SHOW_FORMAT", "overidden-by-flag")
+	_ = os.Setenv("BINDENV_SHOW_PAGECOUNT", "20")
 
-const BindEnvShortHelpText = `Simple demonstration of binding environment variables to command flags.`
+	args := []string{"show", "--format=pretty"}
+
+	ops := []cmder.ExecuteOption{
+		cmder.WithArgs(args),
+		cmder.WithEnvironmentBinding(),
+	}
+
+	if err := cmder.Execute(context.Background(), GetCommand(), ops...); err != nil {
+		fmt.Printf("unexpected error occurred: %v", err)
+	}
+	// Output:
+	// format: pretty
+	// page-count: 20
+}
 
 const BindEnvHelpText = `
 'bind-env' desmonstrates how cmder can be configured to bind environment variables to flags. Explicit command-line
@@ -31,21 +46,25 @@ BINDENV_SHOW_FORMAT=pretty BINDENV_SHOW_PAGECOUNT=20 bind-env show --page-count=
 func GetCommand() *cmder.BaseCommand {
 	return &cmder.BaseCommand{
 		CommandName: "bind-env",
-		Children:    []cmder.Command{GetShowCommand()},
-		Usage:       BindEnvUsageLine,
-		ShortHelp:   BindEnvShortHelpText,
-		Help:        BindEnvHelpText,
-		Examples:    BindEnvExamples,
+		CommandDocumentation: cmder.CommandDocumentation{
+			Usage:     "bind-env [subcommand] [flags]",
+			ShortHelp: "Simple demonstration of binding environment variables to command flags.",
+			Help:      BindEnvHelpText,
+			Examples:  BindEnvExamples,
+		},
+		Children: []cmder.Command{GetShowCommand()},
 	}
 }
 
 func GetShowCommand() *cmder.BaseCommand {
 	return &cmder.BaseCommand{
-		CommandName:   "show",
-		Usage:         `show [flags]`,
-		ShortHelp:     `Show flag values`,
-		Help:          `'show' dumps flag values to stdout.`,
-		Examples:      BindEnvExamples,
+		CommandName: "show",
+		CommandDocumentation: cmder.CommandDocumentation{
+			Usage:     `show [flags]`,
+			ShortHelp: `Show flag values`,
+			Help:      `'show' dumps flag values to stdout.`,
+			Examples:  BindEnvExamples,
+		},
 		InitFlagsFunc: showFlags,
 		RunFunc:       show,
 	}
@@ -72,24 +91,4 @@ func show(ctx context.Context, args []string) error {
 	}
 
 	return nil
-}
-
-func ExampleWithEnvironmentBinding() {
-	_ = os.Setenv("BINDENV_SHOW_FORMAT", "overidden-by-flag")
-	_ = os.Setenv("BINDENV_SHOW_PAGECOUNT", "20")
-
-	args := []string{"show", "--format=pretty"}
-
-	ops := []cmder.ExecuteOption{
-		cmder.WithArgs(args),
-		cmder.WithEnvironmentBinding(),
-	}
-
-	if err := cmder.Execute(context.Background(), GetCommand(), ops...); err != nil {
-		fmt.Printf("unexpected error occurred: %v", err)
-	}
-
-	// Output:
-	// format: pretty
-	// page-count: 20
 }
