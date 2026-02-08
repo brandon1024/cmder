@@ -12,16 +12,27 @@ import (
 	"github.com/brandon1024/cmder"
 )
 
-const usage = `hash [<str>...] [<flags>...]`
+func ExampleWithInterspersedArgs() {
+	args := []string{"string-1", "-a", "md5", "string-2", "-c10", "string-3"}
 
-const short = `Simple demonstration of interspersed arg parsing.`
+	ops := []cmder.ExecuteOption{
+		cmder.WithArgs(args),
+		cmder.WithInterspersedArgs(),
+	}
 
-const desc = `
-'hash' desmonstrates how cmder can be configured to parse args with interspersed args and flags. The command accepts one
-or more strings and generates a hash of the result.
+	if err := cmder.Execute(context.Background(), hasher, ops...); err != nil {
+		fmt.Printf("unexpected error occurred: %v", err)
+	}
+	// Output:
+	// 0559406fc9a7b5704464c303ebbba64c
+}
+
+const HashDesc = `
+'hash' desmonstrates how cmder can be configured to parse args with interspersed args and flags. The command generates
+and prints a hash of the concatenated command args.
 `
 
-const examples = `
+const HashExamples = `
 # with interspersed args
 hash string-1 -a md5 string-2 -c 10 string-3
 
@@ -29,35 +40,37 @@ hash string-1 -a md5 string-2 -c 10 string-3
 hash -a md5 -c 10 string-1 string-2 string-3
 `
 
-type hasher struct {
-	cmder.BaseCommand
-
-	algo   string
-	rounds uint
-}
-
 var (
-	cmd cmder.Command = &hasher{
+	hasher = &Hasher{
 		BaseCommand: cmder.BaseCommand{
 			CommandName: "hash",
-			Usage:       usage,
-			ShortHelp:   short,
-			Help:        desc,
-			Examples:    examples,
+			CommandDocumentation: cmder.CommandDocumentation{
+				Usage:     "hash [<str>...] [<flags>...]",
+				ShortHelp: "Simple demonstration of interspersed arg parsing.",
+				Help:      HashDesc,
+				Examples:  HashExamples,
+			},
 		},
 		algo:   "sha256",
 		rounds: 1,
 	}
 )
 
-func (h *hasher) InitializeFlags(fs *flag.FlagSet) {
+type Hasher struct {
+	cmder.BaseCommand
+
+	algo   string
+	rounds uint
+}
+
+func (h *Hasher) InitializeFlags(fs *flag.FlagSet) {
 	fs.StringVar(&h.algo, "algo", h.algo, "select hashing algorithm (md5, sha1, sha256)")
 	fs.StringVar(&h.algo, "a", h.algo, "select hashing algorithm (md5, sha1, sha256)")
 	fs.UintVar(&h.rounds, "rounds", h.rounds, "number of hashing rounds")
 	fs.UintVar(&h.rounds, "c", h.rounds, "number of hashing rounds")
 }
 
-func (h *hasher) Run(ctx context.Context, args []string) error {
+func (h *Hasher) Run(ctx context.Context, args []string) error {
 	algos := map[string]hash.Hash{
 		"md5":    md5.New(),
 		"sha1":   sha1.New(),
@@ -78,20 +91,4 @@ func (h *hasher) Run(ctx context.Context, args []string) error {
 	fmt.Printf("%x\n", alg.Sum(nil))
 
 	return nil
-}
-
-func ExampleWithInterspersedArgs() {
-	args := []string{"string-1", "-a", "md5", "string-2", "-c10", "string-3"}
-
-	ops := []cmder.ExecuteOption{
-		cmder.WithArgs(args),
-		cmder.WithInterspersedArgs(),
-	}
-
-	if err := cmder.Execute(context.Background(), cmd, ops...); err != nil {
-		fmt.Printf("unexpected error occurred: %v", err)
-	}
-
-	// Output:
-	// 0559406fc9a7b5704464c303ebbba64c
 }

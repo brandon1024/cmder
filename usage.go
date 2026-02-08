@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-// Text template for rendering command usage information in a format similar to that of the popular
-// [github.com/spf13/cobra] library.
+// CobraUsageTemplate is a text template for rendering command usage information in a format similar to that of the
+// popular [github.com/spf13/cobra] library.
 const CobraUsageTemplate = `{{ trim .Command.HelpText }}
 
 Usage:
@@ -80,15 +80,16 @@ Examples:
 	{{- printf "Use \"%s [command] --help\" for more information about a command.\n" .Command.Name -}}
 {{- end -}}`
 
-// Text template for rendering command usage information in a minimal format similar to that of the [flag] library.
+// StdFlagUsageTemplate is a text template for rendering command usage information in a minimal format similar to that
+// of the [flag] library.
 const StdFlagUsageTemplate = `usage: {{ .Command.UsageLine }}
 {{ flagusage . }}`
 
-// The text template for rendering command usage information.
+// UsageTemplate is the text template for rendering command usage information.
 var UsageTemplate = CobraUsageTemplate
 
-// The default writer for command usage information. Standard error is recommended, but you can override this if needed
-// (particularly useful in tests).
+// UsageOutputWriter is the default writer for command usage information. Standard error is recommended, but you can
+// override this if needed (particularly useful in tests).
 var UsageOutputWriter io.Writer = os.Stderr
 
 // ErrShowUsage instructs cmder to render usage and exit.

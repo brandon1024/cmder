@@ -17,6 +17,18 @@ import (
 	"github.com/brandon1024/cmder"
 )
 
+func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+
+	err := cmder.Execute(ctx, &ServerCommand{})
+	cancel()
+
+	if err != nil {
+		fmt.Printf("unexpected error occurred: %v\n", err)
+		os.Exit(1)
+	}
+}
+
 const ServerCommandUsageLine = `server [<options>...]`
 
 const ServerCommandShortHelpText = `A simple webserver built with cmder`
@@ -160,16 +172,4 @@ func (c *ServerCommand) HelpText() string {
 
 func (c *ServerCommand) ExampleText() string {
 	return ServerCommandExamples
-}
-
-func main() {
-	cmd := &ServerCommand{}
-
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
-
-	if err := cmder.Execute(ctx, cmd); err != nil {
-		fmt.Printf("unexpected error occurred: %v\n", err)
-		os.Exit(1)
-	}
 }

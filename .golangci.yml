@@ -1,0 +1,22 @@
+version: "2"
+formatters:
+  enable:
+    - gofmt
+    - goimports
+linters:
+  enable:
+    - godot
+    - misspell
+    - godoclint
+    - gocritic
+    - gosec
+    - errname
+    - modernize
+    - staticcheck
+  exclusions:
+    rules:
+      # relax error handling in examples
+      - path: example_(.+)_test\.go
+        linters:
+          - errcheck
+          - gosec

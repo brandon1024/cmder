@@ -7,6 +7,23 @@ import (
 	"github.com/brandon1024/cmder"
 )
 
+func ExampleRootCommand() {
+	cmd := &ParentCommand{
+		subcommands: []cmder.Command{&ChildCommand{}},
+	}
+
+	args := []string{"child", "hello-world"}
+	if err := cmder.Execute(context.Background(), cmd, cmder.WithArgs(args)); err != nil {
+		fmt.Printf("unexpected error occurred: %v", err)
+	}
+	// Output:
+	// parent: init [child hello-world]
+	// child: init [hello-world]
+	// child: run [hello-world]
+	// child: destroy [hello-world]
+	// parent: destroy [child hello-world]
+}
+
 // === PARENT COMMAND ===
 
 const ParentCommandUsageLine = `parent [<subcommand>] [<args>...]`
@@ -138,24 +155,4 @@ func (c *ChildCommand) HelpText() string {
 
 func (c *ChildCommand) ExampleText() string {
 	return ChildCommandExamples
-}
-
-// === EXAMPLE ===
-
-func ExampleRootCommand() {
-	cmd := &ParentCommand{
-		subcommands: []cmder.Command{&ChildCommand{}},
-	}
-
-	args := []string{"child", "hello-world"}
-	if err := cmder.Execute(context.Background(), cmd, cmder.WithArgs(args)); err != nil {
-		fmt.Printf("unexpected error occurred: %v", err)
-	}
-
-	// Output:
-	// parent: init [child hello-world]
-	// child: init [hello-world]
-	// child: run [hello-world]
-	// child: destroy [hello-world]
-	// parent: destroy [child hello-world]
 }

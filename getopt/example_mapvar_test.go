@@ -15,8 +15,8 @@ func ExampleMapVar() {
 	variables := getopt.MapVar{}
 
 	fs := flag.NewFlagSet("map", flag.ContinueOnError)
-	fs.Var(variables, "variable", "specify runtime variables")
-	fs.Var(variables, "v", "specify runtime variables")
+	fs.Var(&variables, "variable", "specify runtime variables")
+	fs.Var(&variables, "v", "specify runtime variables")
 
 	args := []string{
 		"--variable", "key1=value1",

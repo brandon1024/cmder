@@ -7,6 +7,20 @@ import (
 	"github.com/brandon1024/cmder"
 )
 
+func ExampleRunnableLifecycle() {
+	args := []string{}
+
+	cmd := &LifecycleCommand{}
+
+	if err := cmder.Execute(context.Background(), cmd, cmder.WithArgs(args)); err != nil {
+		fmt.Printf("unexpected error occurred: %v", err)
+	}
+	// Output:
+	// lifecycle: initializing
+	// lifecycle: running
+	// lifecycle: shutting down
+}
+
 const LifecycleCommandUsageLine = `lifecycle [<args>...]`
 
 const LifecycleCommandShortHelpText = `Example command with lifecycle routines`
@@ -56,19 +70,4 @@ func (c *LifecycleCommand) HelpText() string {
 
 func (c *LifecycleCommand) ExampleText() string {
 	return LifecycleCommandExamples
-}
-
-func ExampleRunnableLifecycle() {
-	args := []string{}
-
-	cmd := &LifecycleCommand{}
-
-	if err := cmder.Execute(context.Background(), cmd, cmder.WithArgs(args)); err != nil {
-		fmt.Printf("unexpected error occurred: %v", err)
-	}
-
-	// Output:
-	// lifecycle: initializing
-	// lifecycle: running
-	// lifecycle: shutting down
 }
