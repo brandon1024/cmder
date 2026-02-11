@@ -70,10 +70,12 @@ func run(ctx context.Context, args []string) error {
 func main() {
 	cmd := &cmder.BaseCommand{
 		CommandName: "hello-world",
-		Usage:       "hello-world [<args>...]",
-		ShortHelp:   "Simple demonstration of cmder",
-		Help:        HelloWorldHelpText,
-		Examples:    HelloWorldExamples,
+		CommandDocumentation: cmder.CommandDocumentation{
+			Usage:       "hello-world [<args>...]",
+			ShortHelp:   "Simple demonstration of cmder",
+			Help:        HelloWorldHelpText,
+			Examples:    HelloWorldExamples,
+		},
 		RunFunc:     run,
 	}
 
@@ -113,7 +115,7 @@ base-command --msg 'hi bob!'
 `
 
 type BaseCommandExample struct {
-	cmder.BaseCommand
+	cmder.CommandDocumentation
 
 	msg string
 }
@@ -128,10 +130,13 @@ func (c *BaseCommandExample) Run(ctx context.Context, args []string) error {
 	return nil
 }
 
+func (c *BaseCommandExample) Name() string {
+	return "base-command"
+}
+
 func main() {
 	cmd := &BaseCommandExample{
-		BaseCommand: cmder.BaseCommand{
-			CommandName: "base-command",
+		CommandDocumentation: cmder.CommandDocumentation{
 			Usage:       "base-command [-m | --msg <message>] [<args>...]",
 			ShortHelp:   "A simple example with struct embedding",
 			Help:        BaseCommandExampleHelpText,
