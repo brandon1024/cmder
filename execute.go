@@ -12,14 +12,12 @@ import (
 	"github.com/brandon1024/cmder/getopt"
 )
 
-var (
-	// ErrIllegalCommandConfiguration is an error returned when a [Command] provided to [Execute] is illegal.
-	ErrIllegalCommandConfiguration = errors.New("cmder: illegal command configuration")
+// ErrIllegalCommandConfiguration is an error returned when a [Command] provided to [Execute] is illegal.
+var ErrIllegalCommandConfiguration = errors.New("cmder: illegal command configuration")
 
-	// ErrEnvironmentBindFailure is an error returned when [Execute] failed to update flag value from environment
-	// variable (see [WithEnvironmentBinding]).
-	ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from environment variable")
-)
+// ErrEnvironmentBindFailure is an error returned when [Execute] failed to update a flag value from environment
+// variables (see [WithEnvironmentBinding]).
+var ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from environment variable")
 
 // Execute runs a [Command].
 //
@@ -73,8 +71,8 @@ var (
 // # Usage and Help Texts
 //
 // Whenever the user provides the '-h' or '--help' flag at the command line, [Execute] will display command usage and
-// exit. The format of the help text can be adjusted by configuring [UsageTemplate]. By default, usage information will
-// be written to stderr, but this can be adjusted by setting [UsageOutputWriter].
+// exit. The format of the help text can be adjusted with [WithUsageTemplate]. By default, usage information will
+// be written to stderr, but this can be adjusted by setting [WithUsageOutput].
 //
 // If a command's [Run] routine returns [ErrShowUsage] (or an error wrapping [ErrShowUsage]), [Execute] will render
 // help text and exit with status 2.
@@ -86,7 +84,9 @@ func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 
 	// prepare executor options
 	ops := &ExecuteOptions{
-		args: os.Args[1:],
+		args:          os.Args[1:],
+		usageTemplate: CobraUsageTemplate,
+		usageWriter:   os.Stderr,
 	}
 	for _, f := range op {
 		f(ops)
@@ -100,14 +100,14 @@ func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 
 	// if help was requested, display and exit
 	if cmd, ok := helpRequested(stack); ok {
-		return usage(*cmd)
+		return usage(*cmd, ops)
 	}
 
-	return execute(ctx, stack)
+	return execute(ctx, stack, ops)
 }
 
 // execute traverses the command stack recursively executing the lifecycle routines at each level.
-func execute(ctx context.Context, stack []command) error {
+func execute(ctx context.Context, stack []command, ops *ExecuteOptions) error {
 	if len(stack) == 0 {
 		return nil
 	}
@@ -122,22 +122,22 @@ func execute(ctx context.Context, stack []command) error {
 	)
 
 	// run init (if applicable)
-	if err := this.onInit(ctx); err != nil {
+	if err := this.onInit(ctx, ops); err != nil {
 		return err
 	}
 
 	// if this is a leaf, run, otherwise recurse
 	if len(stack) == 1 {
-		err = this.run(ctx)
+		err = this.run(ctx, ops)
 	} else {
-		err = execute(ctx, stack[1:])
+		err = execute(ctx, stack[1:], ops)
 	}
 	if err != nil {
 		return err
 	}
 
 	// run destroy (if applicable)
-	if err := this.onDestroy(ctx); err != nil {
+	if err := this.onDestroy(ctx, ops); err != nil {
 		return err
 	}
 
@@ -154,7 +154,7 @@ type command struct {
 }
 
 // onInit calls the [RunnableLifecycle] init routine if present on c.
-func (c command) onInit(ctx context.Context) error {
+func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 	var err error
 
 	if cmd, ok := c.Command.(RunnableLifecycle); ok {
@@ -162,7 +162,7 @@ func (c command) onInit(ctx context.Context) error {
 	}
 
 	if errors.Is(err, ErrShowUsage) {
-		_ = usage(c)
+		_ = usage(c, ops)
 		os.Exit(2)
 	}
 
@@ -170,10 +170,10 @@ func (c command) onInit(ctx context.Context) error {
 }
 
 // run calls the [Runnable] run routine of c.
-func (c command) run(ctx context.Context) error {
+func (c command) run(ctx context.Context, ops *ExecuteOptions) error {
 	err := c.Run(ctx, c.args)
 	if errors.Is(err, ErrShowUsage) {
-		_ = usage(c)
+		_ = usage(c, ops)
 		os.Exit(2)
 	}
 
@@ -181,7 +181,7 @@ func (c command) run(ctx context.Context) error {
 }
 
 // onDestroy calls the [RunnableLifecycle] destroy routine if present on c.
-func (c command) onDestroy(ctx context.Context) error {
+func (c command) onDestroy(ctx context.Context, ops *ExecuteOptions) error {
 	var err error
 
 	if cmd, ok := c.Command.(RunnableLifecycle); ok {
@@ -189,7 +189,7 @@ func (c command) onDestroy(ctx context.Context) error {
 	}
 
 	if errors.Is(err, ErrShowUsage) {
-		_ = usage(c)
+		_ = usage(c, ops)
 		os.Exit(2)
 	}
 
