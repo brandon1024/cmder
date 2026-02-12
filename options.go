@@ -1,5 +1,7 @@
 package cmder
 
+import "io"
+
 // ExecuteOptions configure the behaviour of [Execute].
 type ExecuteOptions struct {
 	args          []string
@@ -7,6 +9,8 @@ type ExecuteOptions struct {
 	bindEnv       bool
 	bindEnvPrefix string
 	interspersed  bool
+	usageTemplate string
+	usageWriter   io.Writer
 }
 
 // ExecuteOption is a single option passed to [Execute].
@@ -70,5 +74,24 @@ func WithPrefixedEnvironmentBinding(prefix string) ExecuteOption {
 func WithInterspersedArgs() ExecuteOption {
 	return func(ops *ExecuteOptions) {
 		ops.interspersed = true
+	}
+}
+
+// WithUsageTemplate is used to provide an alternate template for rendering command usage help text. The template is
+// rendered by the standard [text/template] package. This is particularly useful for applications which prefer to format
+// command usage information differently than the cmder defaults.
+//
+// By default, the [CobraUsageTemplate] template is used.
+func WithUsageTemplate(tmpl string) ExecuteOption {
+	return func(ops *ExecuteOptions) {
+		ops.usageTemplate = tmpl
+	}
+}
+
+// WithUsageOutput is used to provide an alternate [io.Writer] to write rendered command usage help text. By default,
+// [os.Stderr] is used.
+func WithUsageOutput(output io.Writer) ExecuteOption {
+	return func(ops *ExecuteOptions) {
+		ops.usageWriter = output
 	}
 }

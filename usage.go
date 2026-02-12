@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"cmp"
 	"flag"
-	"io"
-	"os"
 	"slices"
 	"strings"
 	"text/template"
@@ -85,19 +83,12 @@ Examples:
 const StdFlagUsageTemplate = `usage: {{ .Command.UsageLine }}
 {{ flagusage . }}`
 
-// UsageTemplate is the text template for rendering command usage information.
-var UsageTemplate = CobraUsageTemplate
-
-// UsageOutputWriter is the default writer for command usage information. Standard error is recommended, but you can
-// override this if needed (particularly useful in tests).
-var UsageOutputWriter io.Writer = os.Stderr
-
-// ErrShowUsage instructs cmder to render usage and exit.
+// ErrShowUsage instructs cmder to render usage and exit (status 2).
 var ErrShowUsage = flag.ErrHelp
 
 // usage renders usage text for a [Command] using the default template [UsageTemplate]. Output is written to
 // [UsageOutputWriter].
-func usage(cmd command) error {
+func usage(cmd command, ops *ExecuteOptions) error {
 	tmpl, err := template.New("usage").Funcs(template.FuncMap{
 		"commands":  subcommands,
 		"flags":     flags,
@@ -111,12 +102,12 @@ func usage(cmd command) error {
 		"contains":  strings.Contains,
 		"trim":      strings.TrimSpace,
 		"lines":     strings.Lines,
-	}).Parse(UsageTemplate)
+	}).Parse(ops.usageTemplate)
 	if err != nil {
 		return err
 	}
 
-	return tmpl.Execute(UsageOutputWriter, cmd)
+	return tmpl.Execute(ops.usageWriter, cmd)
 }
 
 // subcommands returns a map of (visible) child subcommands for cmd.

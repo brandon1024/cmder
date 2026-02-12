@@ -3,7 +3,6 @@ package cmder
 import (
 	"bytes"
 	"flag"
-	"os"
 	"testing"
 	"time"
 
@@ -169,18 +168,14 @@ func TestUsage(t *testing.T) {
 	cmd.fs.String("web.telemetry-path", "/metrics", "path under which to expose metrics")
 	cmd.fs.Bool("web.disable-exporter-metrics", false, "exclude metrics about the exporter itself (go_*)")
 
-	t.Cleanup(func() {
-		UsageOutputWriter = os.Stderr
-		UsageTemplate = CobraUsageTemplate
-	})
-
 	t.Run("CobraUsageTemplate", func(t *testing.T) {
 		t.Run("should render correctly", func(t *testing.T) {
 			var buf bytes.Buffer
-			UsageOutputWriter = &buf
-			UsageTemplate = CobraUsageTemplate
 
-			err := usage(cmd)
+			err := usage(cmd, &ExecuteOptions{
+				usageTemplate: CobraUsageTemplate,
+				usageWriter:   &buf,
+			})
 			assert(t, nilerr(err))
 
 			if diff := cmp.Diff(ExpectedCobraUsageTemplate, buf.String()); diff != "" {
@@ -201,10 +196,11 @@ func TestUsage(t *testing.T) {
 			})
 
 			var buf bytes.Buffer
-			UsageOutputWriter = &buf
-			UsageTemplate = CobraUsageTemplate
 
-			err := usage(cmd)
+			err := usage(cmd, &ExecuteOptions{
+				usageTemplate: CobraUsageTemplate,
+				usageWriter:   &buf,
+			})
 			assert(t, nilerr(err))
 
 			if diff := cmp.Diff(ExpectedCobraUsageTemplate, buf.String()); diff != "" {
@@ -216,10 +212,11 @@ func TestUsage(t *testing.T) {
 	t.Run("StdFlagUsageTemplate", func(t *testing.T) {
 		t.Run("should render correctly", func(t *testing.T) {
 			var buf bytes.Buffer
-			UsageOutputWriter = &buf
-			UsageTemplate = StdFlagUsageTemplate
 
-			err := usage(cmd)
+			err := usage(cmd, &ExecuteOptions{
+				usageTemplate: StdFlagUsageTemplate,
+				usageWriter:   &buf,
+			})
 			assert(t, nilerr(err))
 
 			if diff := cmp.Diff(ExpectedStdFlagUsageTemplate, buf.String()); diff != "" {
