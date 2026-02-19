@@ -11,7 +11,7 @@ import (
 // Concrete types can implement additional interfaces to configure additional behaviour, like setup/teardown routines,
 // subcommands, command-line flags, and other behaviour:
 //
-//   - If you want to configure setup and teardown routines for a command, see [RunnableLifecycle].
+//   - If you want to configure setup and teardown routines for a command, see [Initializer] and [Destroyer].
 //   - If your command has subcommands, see [RootCommand].
 //   - If your command has command-life flags and switches, see [FlagInitializer].
 type Command interface {
@@ -29,8 +29,8 @@ type Command interface {
 // Runnable is a fundamental interface implemented by commands. The Run routine is what carries out the work of your
 // command.
 //
-// Concrete types can also implement [RunnableLifecycle] to carry out any initialization and teardown necessary for your
-// Run() routine.
+// Concrete types can also implement [Initializer] or [Destroyer] to carry out any initialization and teardown
+// necessary for your Run() routine.
 type Runnable interface {
 	// Run is the main body of your command executed by [Execute].
 	//
@@ -41,35 +41,19 @@ type Runnable interface {
 	Run(context.Context, []string) error
 }
 
-// RunnableLifecycle may be implemented by commands that need to do some work before and after the [Runnable] Run()
-// routine is invoked.
+// Initializer may be implemented by commands that need to do some work before the [Runnable] Run() routine is invoked.
 //
-// When executing subcommands, the Initialize() and Destroy() routines of parent commands are also invoked. For
-// instance, if executing subcommand 'child' of command 'parent', lifecycle routines are invoked in this order:
-//
-//  1. parent: Initialize()
-//  2. child: Initialize()
-//  3. child: Run()
-//  4. child: Destroy()
-//  5. parent: Destroy()
-//
-// When executing subcommands, the arguments provided to the Initialize() and Destroy() routines of parent commands will
-// include the unprocessed args and flags of child commands. For example:
-//
-//	$ parent --option test child --count 1 arg-1 arg-2
-//
-// will execute lifecycle routines with the arguments:
-//
-//  1. parent: Initialize [child --count 1 arg-1 arg-2]
-//  2. child: Initialize  [arg-1 arg-2]
-//  3. child: Run         [arg-1 arg-2]
-//  4. child: Destroy     [arg-1 arg-2]
-//  5. parent: Destroy    [child --count 1 arg-1 arg-2]
-type RunnableLifecycle interface {
+// See [Execute] for more details on the lifecycle of command execution.
+type Initializer interface {
 	// Initialize carries out any initialization needed for this [Command]. Errors returned by Initialize will abort
 	// execution of the command lifecycle (Run()/Destroy() of this command and parent command(s)).
 	Initialize(context.Context, []string) error
+}
 
+// Destroyer may be implemented by commands that need to do some work after the [Runnable] Run() routine is invoked.
+//
+// See [Execute] for more details on the lifecycle of command execution.
+type Destroyer interface {
 	// Destroy carries out any teardown needed for this [Command]. Errors returned by Destroy will abort execution of
 	// the command lifecycle (Destroy of this command and parent command(s)).
 	Destroy(context.Context, []string) error
@@ -131,12 +115,13 @@ type HiddenCommand interface {
 
 // Compile-time checks.
 var (
-	_ Command           = &BaseCommand{}
-	_ RunnableLifecycle = &BaseCommand{}
-	_ RootCommand       = &BaseCommand{}
-	_ FlagInitializer   = &BaseCommand{}
-	_ Documented        = &CommandDocumentation{}
-	_ HiddenCommand     = &CommandDocumentation{}
+	_ Command         = &BaseCommand{}
+	_ Initializer     = &BaseCommand{}
+	_ Destroyer       = &BaseCommand{}
+	_ RootCommand     = &BaseCommand{}
+	_ FlagInitializer = &BaseCommand{}
+	_ Documented      = &CommandDocumentation{}
+	_ HiddenCommand   = &CommandDocumentation{}
 )
 
 // CommandDocumentation implements [Documented] and can be embdded in command types to reduce boilerplate.
@@ -192,7 +177,7 @@ func (d CommandDocumentation) Hidden() bool {
 	return d.IsHidden
 }
 
-// BaseCommand is an implementation of the [Command], [RunnableLifecycle], [RootCommand] and [FlagInitializer]
+// BaseCommand is an implementation of the [Command], [Initializer], [Destroyer], [RootCommand] and [FlagInitializer]
 // interfaces and may be embedded in your command types to reduce boilerplate.
 type BaseCommand struct {
 	CommandDocumentation
@@ -234,7 +219,7 @@ func (c BaseCommand) InitializeFlags(fs *flag.FlagSet) {
 
 // Initialize runs [BaseCommand] InitFunc, if not nil.
 //
-// See [RunnableLifecycle].
+// See [Initializer].
 func (c BaseCommand) Initialize(ctx context.Context, args []string) error {
 	if c.InitFunc != nil {
 		return c.InitFunc(ctx, args)
@@ -256,7 +241,7 @@ func (c BaseCommand) Run(ctx context.Context, args []string) error {
 
 // Destroy runs [BaseCommand] DestroyFunc, if not nil.
 //
-// See [RunnableLifecycle].
+// See [Destroyer].
 func (c BaseCommand) Destroy(ctx context.Context, args []string) error {
 	if c.DestroyFunc != nil {
 		return c.DestroyFunc(ctx, args)

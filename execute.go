@@ -24,17 +24,17 @@ var ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from en
 // # Execution Lifecycle
 //
 // When executing a command, Execute will call the [Runnable] Run() routine of your command. If the command also
-// implements [RunnableLifecycle], the [RunnableLifecycle] Initialize() and Destroy() routines will be invoked before
+// implements [Initializer] or [Destroyer], the Initialize() or Destroy() routines will be invoked before
 // and after calling Run().
 //
-// If the command implements [RootCommand] and a subcommand is invoked, Execute will invoke the [RunnableLifecycle]
-// routines of parent and child commands:
+// If the command implements [RootCommand] and a subcommand is invoked, Execute will invoke the [Initializer] and
+// [Destroyer] routines of parent and child commands:
 //
-//  1. Root  [RunnableLifecycle] Initialize()
-//  2. Child [RunnableLifecycle] Initialize()
+//  1. Root  [Initializer] Initialize()
+//  2. Child [Initializer] Initialize()
 //  3. Child [Runnable] Run()
-//  4. Child [RunnableLifecycle] Destroy()
-//  5. Root  [RunnableLifecycle] Destroy()
+//  4. Child [Destroyer] Destroy()
+//  5. Root  [Destroyer] Destroy()
 //
 // If a command implements [RootCommand] but the first argument passed to the command doesn't match a recognized child
 // command Name(), the Run() routine will be executed.
@@ -153,11 +153,11 @@ type command struct {
 	showHelp bool
 }
 
-// onInit calls the [RunnableLifecycle] init routine if present on c.
+// onInit calls the [Initializer] init routine if present on c.
 func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 	var err error
 
-	if cmd, ok := c.Command.(RunnableLifecycle); ok {
+	if cmd, ok := c.Command.(Initializer); ok {
 		err = cmd.Initialize(ctx, c.args)
 	}
 
@@ -180,11 +180,11 @@ func (c command) run(ctx context.Context, ops *ExecuteOptions) error {
 	return err
 }
 
-// onDestroy calls the [RunnableLifecycle] destroy routine if present on c.
+// onDestroy calls the [Destroyer] destroy routine if present on c.
 func (c command) onDestroy(ctx context.Context, ops *ExecuteOptions) error {
 	var err error
 
-	if cmd, ok := c.Command.(RunnableLifecycle); ok {
+	if cmd, ok := c.Command.(Destroyer); ok {
 		err = cmd.Destroy(ctx, c.args)
 	}
 

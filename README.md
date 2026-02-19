@@ -156,8 +156,10 @@ are relevant for your command:
 
 - `Command`: All commands and subcommands must implement this interface.
 - `FlagInitializer`: If your command has flags, implement this interface.
-- `RunnableLifecycle`: If your command needs some initialization or teardown,
-  implement this interface.
+- `Initializer`: If your command needs some initialization, implement this
+  interface.
+- `Destroyer`: If your command needs some teardown, implement this
+  interface.
 
 For more information, read through our package documentation on
 [pkg.go.dev](https://pkg.go.dev/github.com/brandon1024/cmder).
