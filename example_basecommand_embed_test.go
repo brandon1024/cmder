@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/brandon1024/cmder"
+	"github.com/brandon1024/cmder/getopt"
 )
 
 // This example demonstrates an alternative usage of [cmder.BaseCommand]. By embedding BaseCommand into your own types,
@@ -69,11 +70,11 @@ func (s *Semver) InitializeFlags(fs *flag.FlagSet) {
 	fs.StringVar(&s.pre, "pre-release", s.pre, "include pre-release information in output (e.g. alpha, x.7.z.92)")
 	fs.StringVar(&s.build, "build", s.build, "include build information in output (e.g. 20130313144700, exp.sha.5114f85)")
 
-	fs.Var(alias(fs.Lookup("major"), "M"))
-	fs.Var(alias(fs.Lookup("minor"), "m"))
-	fs.Var(alias(fs.Lookup("patch"), "p"))
-	fs.Var(alias(fs.Lookup("pre-release"), "x"))
-	fs.Var(alias(fs.Lookup("build"), "b"))
+	getopt.Alias(fs, "major", "M")
+	getopt.Alias(fs, "minor", "m")
+	getopt.Alias(fs, "patch", "p")
+	getopt.Alias(fs, "pre-release", "x")
+	getopt.Alias(fs, "build", "b")
 }
 
 // The command's run function.
@@ -129,9 +130,4 @@ func (s *Semver) Run(ctx context.Context, args []string) error {
 	fmt.Println(version)
 
 	return nil
-}
-
-// Simple helper for creating flag aliases.
-func alias(flg *flag.Flag, name string) (flag.Value, string, string) {
-	return flg.Value, name, flg.Usage
 }

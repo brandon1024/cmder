@@ -7,7 +7,21 @@ import (
 	"github.com/brandon1024/cmder"
 )
 
-func ExampleRunnableLifecycle() {
+func ExampleInitializer() {
+	args := []string{}
+
+	cmd := &LifecycleCommand{}
+
+	if err := cmder.Execute(context.Background(), cmd, cmder.WithArgs(args)); err != nil {
+		fmt.Printf("unexpected error occurred: %v", err)
+	}
+	// Output:
+	// lifecycle: initializing
+	// lifecycle: running
+	// lifecycle: shutting down
+}
+
+func ExampleDestroyer() {
 	args := []string{}
 
 	cmd := &LifecycleCommand{}
@@ -26,7 +40,7 @@ const LifecycleCommandUsageLine = `lifecycle [<args>...]`
 const LifecycleCommandShortHelpText = `Example command with lifecycle routines`
 
 const LifecycleCommandHelpText = `
-'lifecycle' demonstrates a command that implements the RunnableLifecycle interface, defining initialization and
+'lifecycle' demonstrates a command that implements the Initializer and Destroyer interfaces, defining initialization and
 destroy routines.
 `
 
