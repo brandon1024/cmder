@@ -60,7 +60,7 @@ var ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from en
 //
 // If the command also implements [FlagInitializer], InitializeFlags() will be invoked to register additional
 // command-line flags. Each command/subcommand is given a unique [flag.FlagSet]. Help flags ('-h', '--help') are
-// configured automatically and must not be set by the application.
+// configured automatically if not defined and will instruct Execute to render command usage.
 //
 // Execute parses getopt-style (GNU/POSIX) command-line arguments with the help of package [getopt]. To use the standard
 // [flag] syntax instead, see [WithNativeFlags]. Flags and arguments cannot be interspersed by default. You can change
@@ -70,12 +70,13 @@ var ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from en
 //
 // # Usage and Help Texts
 //
-// Whenever the user provides the '-h' or '--help' flag at the command line, [Execute] will display command usage and
-// exit. The format of the help text can be adjusted with [WithUsageTemplate]. By default, usage information will
-// be written to stderr, but this can be adjusted by setting [WithUsageOutput].
+// Whenever the user provides the '-h' or '--help' flag at the command line and the command doesn't register custom help
+// flags, Execute will display command usage and return [ErrShowUsage]. The format of the help text can be adjusted with
+// [WithUsageTemplate]. By default, usage information will be written to stderr, but this can be adjusted by setting
+// [WithUsageOutput].
 //
-// If a command's [Run] routine returns [ErrShowUsage] (or an error wrapping [ErrShowUsage]), [Execute] will render
-// help text and exit with status 2.
+// If a command's Run routine returns [ErrShowUsage] (or an error wrapping [ErrShowUsage]), Execute will render
+// help text and return the error.
 func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 	// do some checks
 	if cmd == nil {
@@ -96,11 +97,6 @@ func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 	stack, err := buildCallStack(cmd, ops)
 	if err != nil {
 		return err
-	}
-
-	// if help was requested, display and exit
-	if cmd, ok := helpRequested(stack); ok {
-		return usage(*cmd, ops)
 	}
 
 	return execute(ctx, stack, ops)
@@ -157,13 +153,16 @@ type command struct {
 func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 	var err error
 
+	if c.showHelp {
+		return errors.Join(ErrShowUsage, usage(c, ops))
+	}
+
 	if cmd, ok := c.Command.(Initializer); ok {
 		err = cmd.Initialize(ctx, c.args)
 	}
 
 	if errors.Is(err, ErrShowUsage) {
-		_ = usage(c, ops)
-		os.Exit(2)
+		return errors.Join(err, usage(c, ops))
 	}
 
 	return err
@@ -173,8 +172,7 @@ func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 func (c command) run(ctx context.Context, ops *ExecuteOptions) error {
 	err := c.Run(ctx, c.args)
 	if errors.Is(err, ErrShowUsage) {
-		_ = usage(c, ops)
-		os.Exit(2)
+		return errors.Join(err, usage(c, ops))
 	}
 
 	return err
@@ -189,8 +187,7 @@ func (c command) onDestroy(ctx context.Context, ops *ExecuteOptions) error {
 	}
 
 	if errors.Is(err, ErrShowUsage) {
-		_ = usage(c, ops)
-		os.Exit(2)
+		return errors.Join(err, usage(c, ops))
 	}
 
 	return err
@@ -212,12 +209,14 @@ func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 			fs:      flag.NewFlagSet(cmd.Name(), flag.ContinueOnError),
 		}
 
-		// add help flags
-		this.fs.BoolVar(&this.showHelp, "h", false, "show command help and usage information")
-		this.fs.BoolVar(&this.showHelp, "help", false, "show command help and usage information")
-
 		if c, ok := cmd.(FlagInitializer); ok {
 			c.InitializeFlags(this.fs)
+		}
+
+		// add help flags
+		if this.fs.Lookup("h") == nil && this.fs.Lookup("help") == nil {
+			this.fs.BoolVar(&this.showHelp, "h", false, "show command help and usage information")
+			this.fs.BoolVar(&this.showHelp, "help", false, "show command help and usage information")
 		}
 
 		// bind environment variables
@@ -329,20 +328,4 @@ func formatEnvvar(flagpath []string) string {
 	}
 
 	return strings.Join(flagpath, "_")
-}
-
-// helpRequested traverses the command stack and returns whether help text was requested with '-h' or '--help' flags,
-// returning the leaf command from stack and true.
-func helpRequested(stack []command) (*command, bool) {
-	if len(stack) == 0 {
-		return nil, false
-	}
-
-	for _, cmd := range stack {
-		if cmd.showHelp {
-			return &stack[len(stack)-1], true
-		}
-	}
-
-	return nil, false
 }
