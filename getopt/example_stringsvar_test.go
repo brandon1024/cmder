@@ -7,29 +7,34 @@ import (
 	"github.com/brandon1024/cmder/getopt"
 )
 
-// This example demonstrates usage of [getopt.StringsVar] for string slice flags. You'll often find string sliceee flags
+// This example demonstrates usage of [getopt.StringsVar] for string slice flags. You'll often find string slice flags
 // on commands that accept IP addresses, for example.
 func ExampleStringsVar() {
-	hosts := getopt.StringsVar{}
-
 	fs := flag.NewFlagSet("stringsvar", flag.ContinueOnError)
+
+	// option 1: use StringsVar directly
+	var hosts getopt.StringsVar
 	fs.Var(&hosts, "broker", "connect to a broker")
-	fs.Var(&hosts, "b", "connect to a broker")
 
-	args := []string{
-		"--broker", "tcp://127.0.0.1",
-		"-b", "tls://broker-1.domain.example.com,tls://broker-2.domain.example.com",
-	}
+	// option 2: wrap an existing slice
+	var args []string
+	fs.Var((*getopt.StringsVar)(&args), "a", "provide args")
 
-	if err := fs.Parse(args); err != nil {
-		panic(err)
-	}
+	fs.Parse([]string{
+		"--broker", "tls://broker-1.domain.example.com,tls://broker-2.domain.example.com",
+		"-a", "CLIENT_USER",
+		"-a", "CLIENT_PASS",
+	})
 
 	for _, host := range hosts {
-		fmt.Printf("'%s'\n", host)
+		fmt.Printf("broker: '%s'\n", host)
+	}
+	for _, arg := range args {
+		fmt.Printf("arg: '%s'\n", arg)
 	}
 	// Output:
-	// 'tcp://127.0.0.1'
-	// 'tls://broker-1.domain.example.com'
-	// 'tls://broker-2.domain.example.com'
+	// broker: 'tls://broker-1.domain.example.com'
+	// broker: 'tls://broker-2.domain.example.com'
+	// arg: 'CLIENT_USER'
+	// arg: 'CLIENT_PASS'
 }
