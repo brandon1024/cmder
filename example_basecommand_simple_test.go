@@ -86,23 +86,23 @@ func run(ctx context.Context, args []string) error {
 	var out io.Writer = os.Stdout
 
 	if args[0] != "-" {
-		inputf, err := os.Open(args[0])
+		inputFile, err := os.Open(args[0])
 		if err != nil {
 			return err
 		}
 
-		defer inputf.Close()
-		in = inputf
+		defer inputFile.Close()
+		in = inputFile
 	}
 
 	if output != "-" {
-		outputf, err := os.Create(output)
+		outputFile, err := os.Create(output)
 		if err != nil {
 			return err
 		}
 
-		defer outputf.Close()
-		out = outputf
+		defer outputFile.Close()
+		out = outputFile
 	}
 
 	if hexdump {

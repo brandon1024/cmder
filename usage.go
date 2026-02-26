@@ -1,7 +1,6 @@
 package cmder
 
 import (
-	"bytes"
 	"cmp"
 	"errors"
 	"flag"
@@ -111,7 +110,6 @@ func help(cmd command, ops *ExecuteOptions) error {
 //
 //   - commands(c):            Collect all subcommands of c into a map, keyed by name.
 //   - flags(c):               Collect all flags of c, organized by flag group name.
-//   - flagusage(c):           Return the flag usage of the flag set for c, as returned by PrintDefaults.
 //   - unquote(f):             Call UnquoteUsage on flag f.
 //   - lower(str):             Return string argument in lowercase.
 //   - upper(str):             Return string argument in uppercase.
@@ -123,18 +121,17 @@ func help(cmd command, ops *ExecuteOptions) error {
 //   - lines(str):             Split str into a slice of text lines.
 func funcs() template.FuncMap {
 	return template.FuncMap{
-		"commands":  subcommands,
-		"flags":     flags,
-		"flagusage": flagUsage,
-		"unquote":   unquote,
-		"lower":     strings.ToLower,
-		"upper":     strings.ToUpper,
-		"split":     strings.Split,
-		"replace":   strings.ReplaceAll,
-		"join":      strings.Join,
-		"contains":  strings.Contains,
-		"trim":      strings.TrimSpace,
-		"lines":     strings.Lines,
+		"commands": subcommands,
+		"flags":    flags,
+		"unquote":  unquote,
+		"lower":    strings.ToLower,
+		"upper":    strings.ToUpper,
+		"split":    strings.Split,
+		"replace":  strings.ReplaceAll,
+		"join":     strings.Join,
+		"contains": strings.Contains,
+		"trim":     strings.TrimSpace,
+		"lines":    strings.Lines,
 	}
 }
 
@@ -210,19 +207,6 @@ func flags(cmd command) map[string][]*flag.Flag {
 	return groups
 }
 
-// flagUsage dumps the flag usage as rendered by the flag library. See [flag.FlagSet.PrintDefaults].
-func flagUsage(cmd command) string {
-	out := cmd.fs.Output()
-	defer cmd.fs.SetOutput(out)
-
-	var buf bytes.Buffer
-	cmd.fs.SetOutput(&buf)
-
-	cmd.fs.PrintDefaults()
-
-	return buf.String()
-}
-
 // unquote calls [flag.UnquoteUsage] for the given [flag.Flag].
 func unquote(flg *flag.Flag) []string {
 	if isBoolFlag(flg) {
@@ -231,7 +215,7 @@ func unquote(flg *flag.Flag) []string {
 
 	name, usage := flag.UnquoteUsage(flg)
 
-	// if no backquoted names found, try to infer from [flag.Getter]
+	// if no `names` found, try to infer from [flag.Getter]
 	if name == "" {
 		if g, ok := flg.Value.(flag.Getter); ok {
 			switch g.Get().(type) {

@@ -30,7 +30,7 @@ type implements all required interfaces needed to fulfill [cmder.Command]. You c
 your own implementation.
 
 Example 'semver' manipulates a version string, bumping it up a major/minor/patch version or attaches build/pre-release
-information. By default, input versoins are bumped up a patch version.
+information. By default, input versions are bumped up a patch version.
 `
 
 const SemverExamples = `

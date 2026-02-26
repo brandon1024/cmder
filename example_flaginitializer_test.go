@@ -1,5 +1,7 @@
 package cmder_test
 
+// spell-checker: ignore kustomization templatefile finalizers
+
 import (
 	"context"
 	"flag"

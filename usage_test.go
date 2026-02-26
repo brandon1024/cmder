@@ -22,7 +22,7 @@ you get started.
 structure and execute your commands, but that's about it. 'cmder' embraces simplicity because sometimes, less is better.
 
 To define a new command, simply define a type that implements the 'Command' interface. If you want your command to have
-additional behaviour like flags or subcommands, simply implement the appropriate interfaces.
+additional behavior like flags or subcommands, simply implement the appropriate interfaces.
 `
 
 const examples = `
@@ -42,7 +42,7 @@ you get started.
 structure and execute your commands, but that's about it. 'cmder' embraces simplicity because sometimes, less is better.
 
 To define a new command, simply define a type that implements the 'Command' interface. If you want your command to have
-additional behaviour like flags or subcommands, simply implement the appropriate interfaces.
+additional behavior like flags or subcommands, simply implement the appropriate interfaces.
 
 Usage:
   test [subcommands] [flags] [args]
@@ -404,7 +404,7 @@ func TestFlags(t *testing.T) {
 		}
 
 		cmd.fs = flag.NewFlagSet("cmd", flag.ContinueOnError)
-		cmd.fs.BoolFunc("verbose", "boolfunc flag", fn1)
+		cmd.fs.BoolFunc("verbose", "bool func flag", fn1)
 		cmd.fs.Var(alias(cmd.fs.Lookup("verbose"), "v"))
 		cmd.fs.Func("optimize", "func flag", fn2)
 		cmd.fs.Var(alias(cmd.fs.Lookup("optimize"), "O"))

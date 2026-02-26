@@ -54,7 +54,7 @@ var ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from en
 //
 // # Execution Options
 //
-// Execute accepts one or more [ExecuteOption] options. You can provide these options to tweak the behaviour of Execute.
+// Execute accepts one or more [ExecuteOption] options. You can provide these options to tweak the behavior of Execute.
 //
 // # Flag Initialization
 //
@@ -64,7 +64,7 @@ var ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from en
 //
 // Execute parses getopt-style (GNU/POSIX) command-line arguments with the help of package [getopt]. To use the standard
 // [flag] syntax instead, see [WithNativeFlags]. Flags and arguments cannot be interspersed by default. You can change
-// this behaviour with [WithInterspersedArgs].
+// this behavior with [WithInterspersedArgs].
 //
 // To bind environment variables to flags, see [WithEnvironmentBinding].
 //
@@ -334,12 +334,12 @@ func bindEnvironmentFlags(stack []command, cmd command, ops *ExecuteOptions) err
 }
 
 // formatEnvvar generates an environment variable name which maps to the given flag path.
-func formatEnvvar(flagpath []string) string {
+func formatEnvvar(flagPath []string) string {
 	reg := regexp.MustCompile("[^a-zA-Z0-9]+")
 
-	for i, v := range flagpath {
-		flagpath[i] = strings.ToUpper(reg.ReplaceAllString(v, ""))
+	for i, v := range flagPath {
+		flagPath[i] = strings.ToUpper(reg.ReplaceAllString(v, ""))
 	}
 
-	return strings.Join(flagpath, "_")
+	return strings.Join(flagPath, "_")
 }

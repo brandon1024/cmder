@@ -1,0 +1,14 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "dictionaries": [
+    "go",
+    "softwareTerms"
+  ],
+  "words": [
+    "cmder",
+    "getopt",
+    "untar",
+    "hexdump"
+  ]
+}

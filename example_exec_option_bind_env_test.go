@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleWithEnvironmentBinding() {
-	os.Setenv("BINDENV_SHOW_FORMAT", "overidden-by-flag")
+	os.Setenv("BINDENV_SHOW_FORMAT", "overridden-by-flag")
 	os.Setenv("BINDENV_SHOW_PAGECOUNT", "20")
 
 	args := []string{"show", "--format=pretty"}
