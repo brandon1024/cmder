@@ -37,8 +37,8 @@ func ExampleStringsVar() {
 	for _, arg := range args {
 		fmt.Printf("arg: '%s'\n", arg)
 	}
-	for _, patt := range patterns {
-		fmt.Printf("patterns: '%s'\n", patt)
+	for _, pattern := range patterns {
+		fmt.Printf("patterns: '%s'\n", pattern)
 	}
 	// Output:
 	// broker: 'tls://broker-1.domain.example.com'

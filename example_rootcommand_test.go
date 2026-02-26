@@ -32,7 +32,7 @@ const ParentCommandShortHelpText = `Example of parent command`
 
 const ParentCommandHelpText = `
 'parent' demonstrates an example of a command with subcommands. When executed without any arguments, the parent's Run
-routine is executed, but if the child subcommand is provided the child subcommand Run routine will be exeuted instead.
+routine is executed, but if the child subcommand is provided the child subcommand Run routine will be executed instead.
 
 The parent implements RootCommand indicating that it is a root command with runnable subcommands. The child does not
 implement RootCommand, indicating it is a leaf command.

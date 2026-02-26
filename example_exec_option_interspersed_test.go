@@ -28,7 +28,7 @@ func ExampleWithInterspersedArgs() {
 }
 
 const HashDesc = `
-'hash' desmonstrates how cmder can be configured to parse args with interspersed args and flags. The command generates
+'hash' demonstrates how cmder can be configured to parse args with interspersed args and flags. The command generates
 and prints a hash of the concatenated command args.
 `
 

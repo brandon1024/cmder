@@ -16,14 +16,14 @@ less is better. The wide range of examples throughout the project should help
 you get started.
 
 To define a new command, simply define a type that implements the `Command`
-interface. If you want your command to have additional behaviour like flags or
+interface. If you want your command to have additional behavior like flags or
 subcommands, simply implement the appropriate interfaces.
 
 Here are some highlights:
 
-- Bring your own types. `cmder` doens't force you to use special `command`
+- Bring your own types. `cmder` doesn't force you to use special `command`
   structs. As long as you implement our narrow interfaces, you're good to go!
-- `cmder` is unobtrustive. Define your command and execute it. Simplicity above
+- `cmder` is unobtrusive. Define your command and execute it. Simplicity above
   all else!
 - `cmder` is totally stateless making it super easy to unit test your commands.
   This isn't the case in other libraries.
@@ -88,7 +88,7 @@ func main() {
 For more complex commands, you can define your own command type. By embedding
 `cmder.BaseCommand`, your command automatically implements all of the important
 interfaces needed to document your command, define flags, register subcommands,
-and so on. You can then override the default behaviour with your own.
+and so on. You can then override the default behavior with your own.
 
 ```go
 package main

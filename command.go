@@ -8,8 +8,8 @@ import (
 // Command is the fundamental interface implemented by types that are runnable commands or subcommands. Commands can
 // be executed with [Execute].
 //
-// Concrete types can implement additional interfaces to configure additional behaviour, like setup/teardown routines,
-// subcommands, command-line flags, and other behaviour:
+// Concrete types can implement additional interfaces to configure additional behavior, like setup/teardown routines,
+// subcommands, command-line flags, and other behavior:
 //
 //   - If you want to configure setup and teardown routines for a command, see [Initializer] and [Destroyer].
 //   - If your command has subcommands, see [RootCommand].
@@ -79,7 +79,7 @@ type Documented interface {
 	//
 	// Here are a few examples:
 	//
-	//	git add [<options>] [--] <pathspec>...
+	//	git add [<options>] [--] <path spec>...
 	//	kubectl get [(-o|--output=)json|yaml|wide] (TYPE[.VERSION][.GROUP] [NAME | -l label] | TYPE[.VERSION][.GROUP]/NAME ...) [flags] [options]
 	//	crane index filter [flags]
 	UsageLine() string
@@ -95,7 +95,7 @@ type Documented interface {
 	ShortHelpText() string
 
 	// HelpText returns longer usage and help information for your users about this subcommand. Here you can describe
-	// the behaviour of your command, summarize usage of certain flags and arguments and provide hints on where to find
+	// the behavior of your command, summarize usage of certain flags and arguments and provide hints on where to find
 	// additional information. This is akin to the "DESCRIPTION" section you would typically find in a man page.
 	//
 	// For a better viewing experience in terminals, consider maintaining consistent line length limits (120 is a good
@@ -124,7 +124,7 @@ var (
 	_ HiddenCommand   = &CommandDocumentation{}
 )
 
-// CommandDocumentation implements [Documented] and can be embdded in command types to reduce boilerplate.
+// CommandDocumentation implements [Documented] and can be embedded in command types to reduce boilerplate.
 type CommandDocumentation struct {
 	// The usage line. See UsageLine() in [Documented].
 	Usage string

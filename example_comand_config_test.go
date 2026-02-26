@@ -46,7 +46,7 @@ const MultiConfSettings = `{
 `
 
 const MultiConfDesc = `
-'multi-conf' desmonstrates how you can setup configuration from a configuration file (json), environment variables, and
+'multi-conf' demonstrates how you can setup configuration from a configuration file (json), environment variables, and
 command-line flags. In this example, configuration is evaluated in this order, from lowest to highest precedence:
 
   1. Configuration File  (/etc/multi.conf)

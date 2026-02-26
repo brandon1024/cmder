@@ -2,7 +2,7 @@ package cmder
 
 import "io"
 
-// ExecuteOptions configure the behaviour of [Execute].
+// ExecuteOptions configure the behavior of [Execute].
 type ExecuteOptions struct {
 	args          []string
 	nativeFlags   bool
@@ -41,7 +41,7 @@ func WithNativeFlags() ExecuteOption {
 //	COMMAND_SUBCOMMAND_FLAGNAME
 //	COMMAND_SUBCOMMAND_SUBCOMMAND_FLAGNAME
 //
-// Command and flag names are all uppercased. Special characters are removed. Flags explicitly set at the command line
+// Command and flag names are made uppercase. Special characters are removed. Flags explicitly set at the command line
 // take precedence over environment variables.
 //
 //	git log --format=oneline   ->   GIT_LOG_FORMAT=oneline
