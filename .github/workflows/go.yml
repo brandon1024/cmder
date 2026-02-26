@@ -11,14 +11,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
+      with:
+        persist-credentials: false
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
         go-version: stable
     - name: Test
       run: make test
-    - name: golangci-lint
+    - name: Lint
       uses: golangci/golangci-lint-action@v9
       with:
         version: v2.9
+    - name: Spelling
+      uses: streetsidesoftware/cspell-action@v8
+      with:
+        files: '**/*.go'
