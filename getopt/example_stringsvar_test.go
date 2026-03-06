@@ -16,14 +16,19 @@ func ExampleStringsVar() {
 	var hosts getopt.StringsVar
 	fs.Var(&hosts, "broker", "connect to a broker")
 
-	// option 2: wrap an existing slice
+	// option 2: wrap an existing slice with Strings
 	var args []string
-	fs.Var((*getopt.StringsVar)(&args), "a", "provide args")
+	fs.Var(getopt.Strings(&args), "a", "provide args")
+
+	// option 3: wrap an existing slice by pointer casting
+	var patterns []string
+	fs.Var((*getopt.StringsVar)(&patterns), "p", "provide patterns")
 
 	fs.Parse([]string{
 		"--broker", "tls://broker-1.domain.example.com,tls://broker-2.domain.example.com",
 		"-a", "CLIENT_USER",
 		"-a", "CLIENT_PASS",
+		"-p", "**/*.go,*.mod,*.sum",
 	})
 
 	for _, host := range hosts {
@@ -32,9 +37,15 @@ func ExampleStringsVar() {
 	for _, arg := range args {
 		fmt.Printf("arg: '%s'\n", arg)
 	}
+	for _, patt := range patterns {
+		fmt.Printf("patterns: '%s'\n", patt)
+	}
 	// Output:
 	// broker: 'tls://broker-1.domain.example.com'
 	// broker: 'tls://broker-2.domain.example.com'
 	// arg: 'CLIENT_USER'
 	// arg: 'CLIENT_PASS'
+	// patterns: '**/*.go'
+	// patterns: '*.mod'
+	// patterns: '*.sum'
 }

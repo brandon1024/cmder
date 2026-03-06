@@ -20,6 +20,11 @@ import (
 //	key1=v=1,key2=v=2
 type MapVar map[string]string
 
+// Map returns a [MapVar] for ss.
+func Map(m map[string]string) MapVar {
+	return MapVar(m)
+}
+
 // String returns the map, formatted as a set of key-value pairs.
 func (m MapVar) String() string {
 	var entries []string

@@ -23,7 +23,7 @@ func main() {
 	err := cmder.Execute(ctx, &ServerCommand{})
 	cancel()
 
-	if err != nil {
+	if err != nil && !errors.Is(err, cmder.ErrShowUsage) && !errors.Is(err, cmder.ErrShowUsage) {
 		fmt.Printf("unexpected error occurred: %v\n", err)
 		os.Exit(1)
 	}
@@ -91,13 +91,20 @@ type ServerCommand struct {
 }
 
 func (c *ServerCommand) InitializeFlags(fs *flag.FlagSet) {
-	fs.StringVar(&c.addr, "http.bind-addr", ":8080", "bind address for the web server")
-	fs.DurationVar(&c.readTimeout, "http.read-timeout", time.Duration(0), "read timeout for requests")
-	fs.DurationVar(&c.writeTimeout, "http.write-timeout", time.Duration(0), "write timeout for responses")
-	fs.IntVar(&c.maxHeaderBytes, "http.max-header-size", http.DefaultMaxHeaderBytes, "max permitted size of the headers in a request")
-	fs.Int64Var(&c.maxBodySize, "http.max-body-size", 1<<26, "max permitted size of the headers in a request")
-	fs.StringVar(&c.basicAuth, "http.auth-basic", "", "basic auth credentials (in format user:pass)")
-	fs.BoolVar(&c.noAuth, "http.no-auth", false, "disable basic auth")
+	fs.StringVar(&c.addr, "http.bind-addr", ":8080",
+		"Sets the `address:port` on which the server will accept requests. The address may be an IPv4 (e.g. 127.0.0.1) or IPv6 (e.g. [2001:db8::1]) address. The address may be empty, in which case the local system is implied (0.0.0.0). If the port is empty or '0' (e.g. ':0'), a port number is automatically chosen.")
+	fs.DurationVar(&c.readTimeout, "http.read-timeout", time.Duration(0),
+		"Configures the maximum duration for reading the entire request, including the body (e.g. 10s). Negative or zero (e.g. 0s) disables the timeout.")
+	fs.DurationVar(&c.writeTimeout, "http.write-timeout", time.Duration(0),
+		"Configures the maximum duration for writing a client response. Negative or zero (e.g. 0s) disables the timeout.")
+	fs.IntVar(&c.maxHeaderBytes, "http.max-header-size", http.DefaultMaxHeaderBytes,
+		"Set the maximum header size, in bytes. Negative or zero disables the limit.")
+	fs.Int64Var(&c.maxBodySize, "http.max-body-size", 1<<26,
+		"Set the maximum request body size, in bytes. Negative or zero disables the limit.")
+	fs.StringVar(&c.basicAuth, "http.auth-basic", "",
+		"Configure basic auth credentials with format `user:pass`.")
+	fs.BoolVar(&c.noAuth, "http.no-auth", false,
+		"Disable basic auth, making the server available to all.")
 }
 
 func (c *ServerCommand) Initialize(ctx context.Context, args []string) error {

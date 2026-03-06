@@ -3,6 +3,7 @@ package cmder
 import (
 	"bytes"
 	"cmp"
+	"errors"
 	"flag"
 	"slices"
 	"strings"
@@ -10,11 +11,11 @@ import (
 	"time"
 )
 
-// CobraUsageTemplate is a text template for rendering command usage information in a format similar to that of the
-// popular [github.com/spf13/cobra] library.
-const CobraUsageTemplate = `{{ trim .Command.HelpText }}
+// DefaultHelpTemplate is a text template for rendering extended command help information.
+const DefaultHelpTemplate = `{{ trim .Command.HelpText }}{{ println }}{{ println }}` + DefaultUsageTemplate
 
-Usage:
+// DefaultUsageTemplate is a text template for rendering command usage information.
+const DefaultUsageTemplate = `Usage:
   {{ trim .Command.UsageLine }}
 
 Examples:
@@ -78,18 +79,50 @@ Examples:
 	{{- printf "Use \"%s [command] --help\" for more information about a command.\n" .Command.Name -}}
 {{- end -}}`
 
-// StdFlagUsageTemplate is a text template for rendering command usage information in a minimal format similar to that
-// of the [flag] library.
-const StdFlagUsageTemplate = `usage: {{ .Command.UsageLine }}
-{{ flagusage . }}`
+// ErrShowUsage instructs cmder to render usage.
+var ErrShowUsage = errors.New("cmder: usage requested")
 
-// ErrShowUsage instructs cmder to render usage and exit (status 2).
-var ErrShowUsage = flag.ErrHelp
+// ErrShowHelp instructs cmder to render help.
+var ErrShowHelp = errors.New("cmder: help requested")
 
-// usage renders usage text for a [Command] using the default template [UsageTemplate]. Output is written to
-// [UsageOutputWriter].
+// usage renders usage text for a [Command].
 func usage(cmd command, ops *ExecuteOptions) error {
-	tmpl, err := template.New("usage").Funcs(template.FuncMap{
+	tmpl, err := template.New("usage").Funcs(funcs()).Parse(ops.usageTemplate)
+	if err != nil {
+		return err
+	}
+
+	return tmpl.Execute(ops.outputWriter, cmd)
+}
+
+// help renders extended help text for a [Command].
+func help(cmd command, ops *ExecuteOptions) error {
+	tmpl, err := template.New("help").Funcs(funcs()).Parse(ops.helpTemplate)
+	if err != nil {
+		return err
+	}
+
+	return tmpl.Execute(ops.outputWriter, cmd)
+}
+
+// funcs returns template functions which can be used in usage/help text templates.
+//
+// The following template functions are available:
+//
+//   - commands(c):            Collect all subcommands of c into a map, keyed by name.
+//   - flags(c):               Collect all flags of c, organized by flag group name.
+//   - flagusage(c):           Return the flag usage of the flag set for c, as returned by PrintDefaults.
+//   - unquote(f):             Call UnquoteUsage on flag f.
+//   - lower(str):             Return string argument in lowercase.
+//   - upper(str):             Return string argument in uppercase.
+//   - split(str):             Split a string.
+//   - replace(str, old, new): Replace occurrences of a string.
+//   - join(slice, delim):     Join a list of strings.
+//   - contains(str, other):   Check if a string contains another string
+//   - trim(str):              Trim all leading and trailing whitespace of str.
+//   - lines(str):             Split str into a slice of text lines.
+func funcs() template.FuncMap {
+	return template.FuncMap{
 		"commands":  subcommands,
 		"flags":     flags,
 		"flagusage": flagUsage,
@@ -102,12 +135,7 @@ func usage(cmd command, ops *ExecuteOptions) error {
 		"contains":  strings.Contains,
 		"trim":      strings.TrimSpace,
 		"lines":     strings.Lines,
-	}).Parse(ops.usageTemplate)
-	if err != nil {
-		return err
 	}
-
-	return tmpl.Execute(ops.usageWriter, cmd)
 }
 
 // subcommands returns a map of (visible) child subcommands for cmd.
