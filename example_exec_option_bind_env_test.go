@@ -10,8 +10,8 @@ import (
 )
 
 func ExampleWithEnvironmentBinding() {
-	_ = os.Setenv("BINDENV_SHOW_FORMAT", "overidden-by-flag")
-	_ = os.Setenv("BINDENV_SHOW_PAGECOUNT", "20")
+	os.Setenv("BINDENV_SHOW_FORMAT", "overidden-by-flag")
+	os.Setenv("BINDENV_SHOW_PAGECOUNT", "20")
 
 	args := []string{"show", "--format=pretty"}
 

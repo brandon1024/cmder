@@ -31,7 +31,7 @@ test --log.level <level>
 test --poll-interval <sec> --web.disable-exporter-metrics
 `
 
-const ExpectedCobraUsageTemplate = `cmder - build powerful command-line applications in Go
+const ExpectedDefaultHelp = `cmder - build powerful command-line applications in Go
 
 'cmder' is a simple and flexible library for building command-line interfaces in Go. If you're coming from Cobra and
 have used it for any length of time, you have surely had your fair share of difficulties with the library. 'cmder' will
@@ -84,36 +84,7 @@ Flags:
 Use "test [command] --help" for more information about a command.
 `
 
-const ExpectedStdFlagUsageTemplate = `usage: test [subcommands] [flags] [args]
-  -a address
-    	address and port of the device (e.g. 192.168.1.1:4567)
-  -addr address
-    	address and port of the device (e.g. 192.168.1.1:4567)
-  -arg key=value
-    	render template with arguments (key=value) (default k=v)
-  -hosts value
-    	specify remote hosts (e.g. tcp://127.0.0.1) (default hello,world)
-  -poll-interval value
-    	attempt to poll the device status more frequently than advertised (default 0s)
-  -r value
-    	specify remote hosts (e.g. tcp://127.0.0.1) (default hello,world)
-  -reconnect-interval duration
-    	interval between connection attempts (e.g. 1m) (default 1m0s)
-  -s serial
-    	serial number of the device (e.g. 10293894a)
-  -serial-number serial
-    	serial number of the device (e.g. 10293894a)
-  -t key=value
-    	render template with arguments (key=value) (default k=v)
-  -web.disable-exporter-metrics
-    	exclude metrics about the exporter itself (go_*)
-  -web.listen-address string
-    	address on which to expose metrics (default ":9090")
-  -web.telemetry-path string
-    	path under which to expose metrics (default "/metrics")
-`
-
-func TestUsage(t *testing.T) {
+func TestHelp(t *testing.T) {
 	child1 := &BaseCommand{
 		CommandName: "child-1",
 		CommandDocumentation: CommandDocumentation{
@@ -168,17 +139,17 @@ func TestUsage(t *testing.T) {
 	cmd.fs.String("web.telemetry-path", "/metrics", "path under which to expose metrics")
 	cmd.fs.Bool("web.disable-exporter-metrics", false, "exclude metrics about the exporter itself (go_*)")
 
-	t.Run("CobraUsageTemplate", func(t *testing.T) {
+	t.Run("DefaultHelpTemplate", func(t *testing.T) {
 		t.Run("should render correctly", func(t *testing.T) {
 			var buf bytes.Buffer
 
-			err := usage(cmd, &ExecuteOptions{
-				usageTemplate: CobraUsageTemplate,
-				usageWriter:   &buf,
+			err := help(cmd, &ExecuteOptions{
+				helpTemplate: DefaultHelpTemplate,
+				outputWriter: &buf,
 			})
 			assert(t, nilerr(err))
 
-			if diff := cmp.Diff(ExpectedCobraUsageTemplate, buf.String()); diff != "" {
+			if diff := cmp.Diff(ExpectedDefaultHelp, buf.String()); diff != "" {
 				t.Fatalf("usage text mismatch (-want +got):\n%s", diff)
 			}
 		})
@@ -197,29 +168,13 @@ func TestUsage(t *testing.T) {
 
 			var buf bytes.Buffer
 
-			err := usage(cmd, &ExecuteOptions{
-				usageTemplate: CobraUsageTemplate,
-				usageWriter:   &buf,
+			err := help(cmd, &ExecuteOptions{
+				helpTemplate: DefaultHelpTemplate,
+				outputWriter: &buf,
 			})
 			assert(t, nilerr(err))
 
-			if diff := cmp.Diff(ExpectedCobraUsageTemplate, buf.String()); diff != "" {
-				t.Fatalf("usage text mismatch (-want +got):\n%s", diff)
-			}
-		})
-	})
-
-	t.Run("StdFlagUsageTemplate", func(t *testing.T) {
-		t.Run("should render correctly", func(t *testing.T) {
-			var buf bytes.Buffer
-
-			err := usage(cmd, &ExecuteOptions{
-				usageTemplate: StdFlagUsageTemplate,
-				usageWriter:   &buf,
-			})
-			assert(t, nilerr(err))
-
-			if diff := cmp.Diff(ExpectedStdFlagUsageTemplate, buf.String()); diff != "" {
+			if diff := cmp.Diff(ExpectedDefaultHelp, buf.String()); diff != "" {
 				t.Fatalf("usage text mismatch (-want +got):\n%s", diff)
 			}
 		})

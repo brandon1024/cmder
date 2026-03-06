@@ -17,6 +17,11 @@ import (
 //	"value, 1","value, 2"
 type StringsVar []string
 
+// Strings returns a [StringsVar] for ss.
+func Strings(ss *[]string) *StringsVar {
+	return (*StringsVar)(ss)
+}
+
 // String returns the slice, formatted as comma-separated values.
 func (s StringsVar) String() string {
 	var builder strings.Builder

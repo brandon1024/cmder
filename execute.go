@@ -70,13 +70,13 @@ var ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from en
 //
 // # Usage and Help Texts
 //
-// Whenever the user provides the '-h' or '--help' flag at the command line and the command doesn't register custom help
-// flags, Execute will display command usage and return [ErrShowUsage]. The format of the help text can be adjusted with
-// [WithUsageTemplate]. By default, usage information will be written to stderr, but this can be adjusted by setting
-// [WithUsageOutput].
+// Unless explicitly overridden by the command, the '-h' flag instructs Execute to render command usage information to
+// stdout and return [ErrShowUsage]. The default usage text includes a usage synopsis, subcommands and flags. The
+// format of the usage text can be adjusted (see [WithUsageTemplate]). Returning [ErrShowUsage] from a command's
+// Initialize or Run routines will also instruct Execute to render usage.
 //
-// If a command's Run routine returns [ErrShowUsage] (or an error wrapping [ErrShowUsage]), Execute will render
-// help text and return the error.
+// Likewise, the '--help' flag instructs Execute to render extended help usage information to stdout, returning
+// [ErrShowHelp]. The format may be adjusted (see [WithHelpTemplate]).
 func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 	// do some checks
 	if cmd == nil {
@@ -86,8 +86,9 @@ func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 	// prepare executor options
 	ops := &ExecuteOptions{
 		args:          os.Args[1:],
-		usageTemplate: CobraUsageTemplate,
-		usageWriter:   os.Stderr,
+		usageTemplate: DefaultUsageTemplate,
+		helpTemplate:  DefaultHelpTemplate,
+		outputWriter:  os.Stdout,
 	}
 	for _, f := range op {
 		f(ops)
@@ -144,17 +145,21 @@ func execute(ctx context.Context, stack []command, ops *ExecuteOptions) error {
 type command struct {
 	Command
 
-	fs       *flag.FlagSet
-	args     []string
-	showHelp bool
+	fs        *flag.FlagSet
+	args      []string
+	showUsage bool
+	showHelp  bool
 }
 
 // onInit calls the [Initializer] init routine if present on c.
 func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 	var err error
 
-	if c.showHelp {
+	if c.showUsage {
 		return errors.Join(ErrShowUsage, usage(c, ops))
+	}
+	if c.showHelp {
+		return errors.Join(ErrShowUsage, help(c, ops))
 	}
 
 	if cmd, ok := c.Command.(Initializer); ok {
@@ -170,6 +175,13 @@ func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 
 // run calls the [Runnable] run routine of c.
 func (c command) run(ctx context.Context, ops *ExecuteOptions) error {
+	if c.showUsage {
+		return errors.Join(ErrShowUsage, usage(c, ops))
+	}
+	if c.showHelp {
+		return errors.Join(ErrShowUsage, help(c, ops))
+	}
+
 	err := c.Run(ctx, c.args)
 	if errors.Is(err, ErrShowUsage) {
 		return errors.Join(err, usage(c, ops))
@@ -214,9 +226,11 @@ func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 		}
 
 		// add help flags
-		if this.fs.Lookup("h") == nil && this.fs.Lookup("help") == nil {
-			this.fs.BoolVar(&this.showHelp, "h", false, "show command help and usage information")
-			this.fs.BoolVar(&this.showHelp, "help", false, "show command help and usage information")
+		if this.fs.Lookup("h") == nil {
+			this.fs.BoolVar(&this.showUsage, "h", false, "show command usage information")
+		}
+		if this.fs.Lookup("help") == nil {
+			this.fs.BoolVar(&this.showHelp, "help", false, "show command help information")
 		}
 
 		// bind environment variables

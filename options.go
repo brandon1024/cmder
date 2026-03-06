@@ -9,8 +9,10 @@ type ExecuteOptions struct {
 	bindEnv       bool
 	bindEnvPrefix string
 	interspersed  bool
+
 	usageTemplate string
-	usageWriter   io.Writer
+	helpTemplate  string
+	outputWriter  io.Writer
 }
 
 // ExecuteOption is a single option passed to [Execute].
@@ -44,6 +46,8 @@ func WithNativeFlags() ExecuteOption {
 //
 //	git log --format=oneline   ->   GIT_LOG_FORMAT=oneline
 //	git log --no-abbrev-commit ->   GIT_LOG_NOABBREVCOMMIT=true
+//
+// See also [WithPrefixedEnvironmentBinding].
 func WithEnvironmentBinding() ExecuteOption {
 	return func(ops *ExecuteOptions) {
 		ops.bindEnv = true
@@ -56,6 +60,8 @@ func WithEnvironmentBinding() ExecuteOption {
 //	<PREFIX>COMMAND_FLAGNAME
 //	<PREFIX>COMMAND_SUBCOMMAND_FLAGNAME
 //	<PREFIX>COMMAND_SUBCOMMAND_SUBCOMMAND_FLAGNAME
+//
+// See also [WithEnvironmentBinding].
 func WithPrefixedEnvironmentBinding(prefix string) ExecuteOption {
 	return func(ops *ExecuteOptions) {
 		ops.bindEnv = true
@@ -77,21 +83,38 @@ func WithInterspersedArgs() ExecuteOption {
 	}
 }
 
-// WithUsageTemplate is used to provide an alternate template for rendering command usage help text. The template is
+// WithHelpTemplate is used to provide an alternate template for rendering command help text. The template is
+// rendered by the standard [text/template] package. This is particularly useful for applications which prefer to format
+// command help text differently than the cmder defaults.
+//
+// By default, the [DefaultHelpTemplate] template is used.
+//
+// See also [WithUsageTemplate] and [WithOutputWriter].
+func WithHelpTemplate(tmpl string) ExecuteOption {
+	return func(ops *ExecuteOptions) {
+		ops.helpTemplate = tmpl
+	}
+}
+
+// WithUsageTemplate is used to provide an alternate template for rendering command usage text. The template is
 // rendered by the standard [text/template] package. This is particularly useful for applications which prefer to format
 // command usage information differently than the cmder defaults.
 //
-// By default, the [CobraUsageTemplate] template is used.
+// By default, the [DefaultUsageTemplate] template is used.
+//
+// See also [WithHelpTemplate] and [WithOutputWriter].
 func WithUsageTemplate(tmpl string) ExecuteOption {
 	return func(ops *ExecuteOptions) {
 		ops.usageTemplate = tmpl
 	}
 }
 
-// WithUsageOutput is used to provide an alternate [io.Writer] to write rendered command usage help text. By default,
-// [os.Stderr] is used.
-func WithUsageOutput(output io.Writer) ExecuteOption {
+// WithOutputWriter is used to provide an alternate [io.Writer] to write rendered command usage/help text. By default,
+// [os.Stdout] is used.
+//
+// See also [WithHelpTemplate] and [WithUsageTemplate].
+func WithOutputWriter(output io.Writer) ExecuteOption {
 	return func(ops *ExecuteOptions) {
-		ops.usageWriter = output
+		ops.outputWriter = output
 	}
 }

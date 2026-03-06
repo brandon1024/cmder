@@ -8,6 +8,11 @@ import (
 // [flag.Getter].
 type TimeVar time.Time
 
+// Time returns a [TimeVar] for tm.
+func Time(tm *time.Time) *TimeVar {
+	return (*TimeVar)(tm)
+}
+
 // String returns the [time.RFC3339] representation of the timestamp flag.
 func (t *TimeVar) String() string {
 	return time.Time(*t).Format(time.RFC3339)
