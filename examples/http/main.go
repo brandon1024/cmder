@@ -23,7 +23,11 @@ func main() {
 	err := cmder.Execute(ctx, &ServerCommand{})
 	cancel()
 
-	if err != nil && !errors.Is(err, cmder.ErrShowUsage) && !errors.Is(err, cmder.ErrShowUsage) {
+	if errors.Is(err, cmder.ErrShowUsage) || errors.Is(err, cmder.ErrShowHelp) {
+		return
+	}
+
+	if err != nil {
 		fmt.Printf("unexpected error occurred: %v\n", err)
 		os.Exit(1)
 	}

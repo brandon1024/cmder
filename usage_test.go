@@ -132,7 +132,7 @@ func TestHelp(t *testing.T) {
 	cmd.fs.Var(alias(cmd.fs.Lookup("hosts"), "r"))
 
 	cmd.fs.Duration("poll-interval", time.Duration(0), "attempt to poll the device status more frequently than advertised")
-	getopt.Hide(cmd.fs.Lookup("poll-interval"))
+	getopt.Hide(cmd.fs, "poll-interval")
 
 	cmd.fs.Duration("reconnect-interval", time.Minute, "interval between connection attempts (e.g. 1m)")
 	cmd.fs.String("web.listen-address", ":9090", "address on which to expose metrics")

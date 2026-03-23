@@ -8,7 +8,7 @@ import (
 	"github.com/brandon1024/cmder/getopt"
 )
 
-// This example demonstrates the usage of [getopt.Hidden] and [getopt.Hide].
+// This example demonstrates the usage of [getopt.HiddenVar] and [getopt.Hide].
 func ExampleHide() {
 	var (
 		count  uint
@@ -23,14 +23,14 @@ func ExampleHide() {
 	fs.StringVar(&output, "o", "-", "output `file`")
 
 	// option 1: wrap the flag value
-	fs.Lookup("c").Value = &getopt.Hidden{fs.Lookup("c").Value}
+	fs.Lookup("c").Value = &getopt.HiddenVar{fs.Lookup("c").Value}
 
 	// option 2: use getopt.Hide
-	getopt.Hide(fs.Lookup("o"))
+	getopt.Hide(fs.FlagSet, "o")
 
 	// option 3: using FlagSet.Var
 	var since getopt.TimeVar
-	fs.Var(&getopt.Hidden{&since}, "since", "show items since")
+	fs.Var(&getopt.HiddenVar{&since}, "since", "show items since")
 
 	fs.SetOutput(os.Stdout)
 	fs.PrintDefaults()
