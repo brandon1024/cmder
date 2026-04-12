@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/brandon1024/cmder"
+	"github.com/brandon1024/cmder/getopt"
 )
 
 func main() {
@@ -90,8 +91,8 @@ type ServerCommand struct {
 	// The value of this field is a username and password with format `user:pass`.
 	basicAuth string
 
-	// If configured, basic auth is disabled.
-	noAuth bool
+	// If configured, auth is enabled.
+	auth bool
 }
 
 func (c *ServerCommand) InitializeFlags(fs *flag.FlagSet) {
@@ -107,8 +108,9 @@ func (c *ServerCommand) InitializeFlags(fs *flag.FlagSet) {
 		"Set the maximum request body size, in bytes. Negative or zero disables the limit.")
 	fs.StringVar(&c.basicAuth, "http.auth-basic", "",
 		"Configure basic auth credentials with format `user:pass`.")
-	fs.BoolVar(&c.noAuth, "http.no-auth", false,
-		"Disable basic auth, making the server available to all.")
+
+	fs.BoolVar(&c.auth, "http.auth", true, "Enable basic auth. Basic auth credentials must be configured with 'http.auth-basic' option.")
+	fs.Var(getopt.NegatedBool(&c.auth), "http.no-auth", "Disable basic auth, making the server available to all.")
 }
 
 func (c *ServerCommand) Initialize(ctx context.Context, args []string) error {
@@ -117,7 +119,7 @@ func (c *ServerCommand) Initialize(ctx context.Context, args []string) error {
 		return cmder.ErrShowUsage
 	}
 
-	if !c.noAuth && c.basicAuth == "" {
+	if c.auth && c.basicAuth == "" {
 		var (
 			user = "admin"
 			pass = uuid.New().String()

@@ -26,7 +26,7 @@ func (c *ServerCommand) route(h http.HandlerFunc) http.HandlerFunc {
 
 		// auth
 		u, p, ok := r.BasicAuth()
-		if !c.noAuth && (!ok || c.basicAuth != u+":"+p) {
+		if c.auth && (!ok || c.basicAuth != u+":"+p) {
 			slog.Warn("client request denied: missing or invalid credentials", "method", r.Method, "addr", r.RemoteAddr,
 				"uri", r.URL.Path)
 
@@ -35,7 +35,7 @@ func (c *ServerCommand) route(h http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		if !c.noAuth {
+		if c.auth {
 			slog.Info("client authenticated", "method", r.Method, "addr", r.RemoteAddr, "uri", r.URL.Path, "user", u)
 		}
 

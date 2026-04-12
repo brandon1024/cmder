@@ -121,15 +121,15 @@ func TestHelp(t *testing.T) {
 	}
 
 	cmd.fs.String("serial-number", "", "`serial` number of the device (e.g. 10293894a)")
-	cmd.fs.Var(alias(cmd.fs.Lookup("serial-number"), "s"))
+	getopt.Alias(cmd.fs, "serial-number", "s")
 	cmd.fs.String("addr", "", "`address` and port of the device (e.g. 192.168.1.1:4567)")
-	cmd.fs.Var(alias(cmd.fs.Lookup("addr"), "a"))
+	getopt.Alias(cmd.fs, "addr", "a")
 
 	cmd.fs.Var(getopt.MapVar{"k": "v"}, "arg", "render template with arguments (`key=value`)")
-	cmd.fs.Var(alias(cmd.fs.Lookup("arg"), "t"))
+	getopt.Alias(cmd.fs, "arg", "t")
 
 	cmd.fs.Var(&getopt.StringsVar{"hello", "world"}, "hosts", "specify remote hosts (e.g. tcp://127.0.0.1)")
-	cmd.fs.Var(alias(cmd.fs.Lookup("hosts"), "r"))
+	getopt.Alias(cmd.fs, "hosts", "r")
 
 	cmd.fs.Duration("poll-interval", time.Duration(0), "attempt to poll the device status more frequently than advertised")
 	getopt.Hide(cmd.fs, "poll-interval")
