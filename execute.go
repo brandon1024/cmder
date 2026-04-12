@@ -267,7 +267,7 @@ func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 
 // parseArgs processes args for the given command, returning the unparsed (remaining) arguments.
 func parseArgs(cmd command, args []string, ops *ExecuteOptions) ([]string, error) {
-	var fp flagParser = &getopt.PosixFlagSet{FlagSet: cmd.fs}
+	var fp flagParser = &getopt.PosixFlagSet{FlagSet: cmd.fs, RelaxedParsing: ops.relaxedFlags}
 
 	if ops.nativeFlags {
 		fp = cmd.fs

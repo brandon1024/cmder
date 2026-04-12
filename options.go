@@ -6,6 +6,7 @@ import "io"
 type ExecuteOptions struct {
 	args          []string
 	nativeFlags   bool
+	relaxedFlags  bool
 	bindEnv       bool
 	bindEnvPrefix string
 	interspersed  bool
@@ -31,6 +32,16 @@ func WithArgs(args []string) ExecuteOption {
 func WithNativeFlags() ExecuteOption {
 	return func(ops *ExecuteOptions) {
 		ops.nativeFlags = true
+	}
+}
+
+// WithRelaxedFlagParsing instructs [Execute] to relax flag parsing. Partial name matches for long flags are permitted,
+// granted the provided flag name is not ambiguous.
+//
+// This option is ignored if [WithNativeFlags] is enabled.
+func WithRelaxedFlagParsing() ExecuteOption {
+	return func(ops *ExecuteOptions) {
+		ops.relaxedFlags = true
 	}
 }
 
