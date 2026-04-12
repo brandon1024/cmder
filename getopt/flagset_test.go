@@ -631,6 +631,140 @@ func TestPosixFlagSet(t *testing.T) {
 				t.Fatalf("output var not updated with expected value: %s", output)
 			}
 		})
+
+		t.Run("should exactly match flag names when relaxed parsing disabled", func(t *testing.T) {
+			var autoGc, autoMaintenance bool
+
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
+			fs.BoolVar(&autoGc, "auto-gc", false, "enable automatic garbage collection")
+			fs.BoolVar(&autoMaintenance, "auto-maintenance", false, "enable automatic maintenance")
+
+			err := fs.Parse([]string{"--auto-m"})
+			if err == nil {
+				t.Fatalf("expected error but was nil")
+			}
+			if !strings.Contains(err.Error(), "flag '--auto-m' does not exist") {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+
+		t.Run("should permit partial flag names when relaxed parsing enabled", func(t *testing.T) {
+			var autoGc, autoMaintenance bool
+			var algo string
+
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
+			fs.RelaxedParsing = true
+
+			fs.BoolVar(&autoGc, "auto-gc", false, "enable automatic garbage collection")
+			fs.BoolVar(&autoMaintenance, "auto-maintenance", false, "enable automatic maintenance")
+			fs.StringVar(&algo, "algorithm", "sha256", "specify an algorithm")
+
+			err := fs.Parse([]string{"--auto-m", "--al=md5"})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if autoGc {
+				t.Fatalf("flag set unexpectedly: auto-gc")
+			}
+			if !autoMaintenance {
+				t.Fatalf("flag set unexpectedly: auto-maintenance")
+			}
+			if algo != "md5" {
+				t.Fatalf("unexpected flag value for algorithm: %s", algo)
+			}
+		})
+
+		t.Run("should not parse long format flags with short names", func(t *testing.T) {
+			var output string
+
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
+			fs.StringVar(&output, "output", "-", "output `file`")
+			fs.StringVar(&output, "a", "-", "output `file`")
+
+			err := fs.Parse([]string{"--a", "test.json"})
+			if err == nil {
+				t.Fatalf("expected error but was nil")
+			}
+			if !strings.Contains(err.Error(), "flag '--a' does not exist") {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	})
+
+	t.Run("Visit", func(t *testing.T) {
+		t.Run("should correctly visit only set flags", func(t *testing.T) {
+			var (
+				count  uint
+				output string
+				all    bool
+			)
+
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
+			fs.UintVar(&count, "count", 12, "`number` of results")
+			fs.UintVar(&count, "c", 12, "`number` of results")
+			fs.StringVar(&output, "output", "-", "output `file`")
+			fs.StringVar(&output, "o", "-", "output `file`")
+			fs.BoolVar(&all, "all", false, "show `all`")
+			fs.BoolVar(&all, "a", false, "show `all`")
+
+			err := fs.Parse([]string{"-ac10", "--output=test.json"})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			var visited []string
+
+			fs.Visit(func(flg *flag.Flag) {
+				visited = append(visited, flg.Name)
+			})
+
+			if len(visited) != 3 {
+				t.Fatalf("unexpected number of flags visited: %d", len(visited))
+			}
+			if !slices.Contains(visited, "a") {
+				t.Fatalf("missing flag 'a': %v", visited)
+			}
+			if !slices.Contains(visited, "c") {
+				t.Fatalf("missing flag 'c': %v", visited)
+			}
+			if !slices.Contains(visited, "output") {
+				t.Fatalf("missing flag 'output': %v", visited)
+			}
+		})
+	})
+
+	t.Run("VisitAll", func(t *testing.T) {
+		t.Run("should correctly visit all flags", func(t *testing.T) {
+			var (
+				count  uint
+				output string
+				all    bool
+			)
+
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
+			fs.UintVar(&count, "count", 12, "`number` of results")
+			fs.UintVar(&count, "c", 12, "`number` of results")
+			fs.StringVar(&output, "output", "-", "output `file`")
+			fs.StringVar(&output, "o", "-", "output `file`")
+			fs.BoolVar(&all, "all", false, "show `all`")
+			fs.BoolVar(&all, "a", false, "show `all`")
+
+			err := fs.Parse([]string{"-ac10", "--output=test.json"})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			var visited []string
+
+			fs.VisitAll(func(flg *flag.Flag) {
+				visited = append(visited, flg.Name)
+			})
+
+			if len(visited) != 6 {
+				t.Fatalf("unexpected number of flags visited: %d", len(visited))
+			}
+		})
 	})
 
 	t.Run("PrintDefaults", func(t *testing.T) {

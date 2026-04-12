@@ -27,6 +27,22 @@ func ExampleWithInterspersedArgs() {
 	// 0559406fc9a7b5704464c303ebbba64c
 }
 
+func ExampleWithRelaxedFlagParsing() {
+	// note that shorthand '--al' is permitted for flag '--algo'
+	args := []string{"--al", "md5", "relaxed-parsing"}
+
+	ops := []cmder.ExecuteOption{
+		cmder.WithArgs(args),
+		cmder.WithRelaxedFlagParsing(),
+	}
+
+	if err := cmder.Execute(context.Background(), hasher, ops...); err != nil {
+		fmt.Printf("unexpected error occurred: %v", err)
+	}
+	// Output:
+	// 21db31e27ddc3aef918b031bd978fa78
+}
+
 const HashDesc = `
 'hash' demonstrates how cmder can be configured to parse args with interspersed args and flags. The command generates
 and prints a hash of the concatenated command args.

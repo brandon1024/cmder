@@ -86,6 +86,14 @@ import (
 type PosixFlagSet struct {
 	*flag.FlagSet
 
+	// Similar to [flag.FlagSet.Usage], Usage is invoked when parsing fails. By default, uses
+	// [PosixFlagSet.PrintDefaults] which renders flag usage with posix semantics.
+	Usage func()
+
+	// If true, relaxes flag parsing allowing Parse to accept partial flag matches (e.g. '--auto' for '--auto-gc'). An
+	// error will still be emitted if the input is ambiguous (e.g. '--auto' for '--auto-gc' or '--auto-maintenance').
+	RelaxedParsing bool
+
 	parsed bool
 	args   []string
 }
@@ -213,15 +221,19 @@ func (f *PosixFlagSet) parse(arguments []string) error {
 	for len(arguments) > 0 {
 		arg := arguments[0]
 
+		// a single hyphen is not a flag -- update arguments and return
 		if arg == "-" {
 			f.args = arguments[0:]
 			return nil
 		}
+
+		// double hyphens is sentinel and denotes end of arguments -- remove from arguments and return
 		if arg == "--" {
 			f.args = arguments[1:]
 			return nil
 		}
 
+		// parse long option
 		long, ok := strings.CutPrefix(arg, "--")
 		if ok {
 			arguments, err = f.parseLong(long, arguments[1:])
@@ -232,6 +244,7 @@ func (f *PosixFlagSet) parse(arguments []string) error {
 			continue
 		}
 
+		// parse short option
 		short, ok := strings.CutPrefix(arg, "-")
 		if ok {
 			arguments, err = f.parseShort(short, arguments[1:])
@@ -253,10 +266,13 @@ func (f *PosixFlagSet) parse(arguments []string) error {
 func (f *PosixFlagSet) parseLong(arg string, arguments []string) ([]string, error) {
 	arg, value, inlineVal := strings.Cut(arg, "=")
 
-	flg := f.Lookup(arg)
+	flg := f.lookupLong(arg, f.RelaxedParsing)
+
+	// similar to the stdlib, if we encounter a '--help' flag but none defined, return ErrHelp
 	if flg == nil && arg == "help" {
 		return nil, flag.ErrHelp
 	}
+
 	if flg == nil {
 		return nil, fmt.Errorf("flag '--%s' does not exist", arg)
 	}
@@ -266,6 +282,7 @@ func (f *PosixFlagSet) parseLong(arg string, arguments []string) ([]string, erro
 			value = "true"
 		}
 	} else {
+		// if the value was not provided inline '--arg=value', grab the next argument
 		if !inlineVal {
 			if len(arguments) == 0 {
 				return nil, fmt.Errorf("missing argument to flag '--%s'", arg)
@@ -275,7 +292,7 @@ func (f *PosixFlagSet) parseLong(arg string, arguments []string) ([]string, erro
 		}
 	}
 
-	if err := f.Set(arg, value); err != nil {
+	if err := f.Set(flg.Name, value); err != nil {
 		return nil, err
 	}
 
@@ -329,4 +346,37 @@ func (f *PosixFlagSet) parseShort(short string, arguments []string) ([]string, e
 	}
 
 	return arguments, nil
+}
+
+// lookupLong looks for a (long) flag with the given name in f. Returns nil if no flag found.
+//
+// When relaxed is true, partial flag name matches are permitted. If more than one flag name has the prefix name,
+// returns nil.
+func (f *PosixFlagSet) lookupLong(name string, relaxed bool) *flag.Flag {
+	// never match a short name, since the user is expected to use short-style flags instead ('-a' and not '--a')
+	if len(name) <= 1 {
+		return nil
+	}
+
+	var flags []*flag.Flag
+
+	f.VisitAll(func(flg *flag.Flag) {
+		// don't match short flags
+		if len(flg.Name) <= 1 {
+			return
+		}
+
+		if !relaxed && flg.Name == name {
+			flags = append(flags, flg)
+		}
+		if relaxed && strings.HasPrefix(flg.Name, name) {
+			flags = append(flags, flg)
+		}
+	})
+
+	if len(flags) != 1 {
+		return nil
+	}
+
+	return flags[0]
 }
