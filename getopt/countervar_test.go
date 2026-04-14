@@ -35,4 +35,18 @@ func TestCounterVar(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+
+	t.Run("should not panic if calling String on zero or nil value", func(t *testing.T) {
+		var z CounterVar[uint16]
+
+		if result := z.String(); result != "0" {
+			t.Fatalf("unexpected result: %s", result)
+		}
+
+		var zp *CounterVar[uint16]
+
+		if result := zp.String(); result != "0" {
+			t.Fatalf("unexpected result: %s", result)
+		}
+	})
 }

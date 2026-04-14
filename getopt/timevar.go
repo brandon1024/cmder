@@ -14,8 +14,8 @@ func Time(tm *time.Time) *TimeVar {
 }
 
 // String returns the [time.RFC3339] representation of the timestamp flag.
-func (t *TimeVar) String() string {
-	return time.Time(*t).Format(time.RFC3339)
+func (t TimeVar) String() string {
+	return time.Time(t).Format(time.RFC3339)
 }
 
 // Set fulfills the [flag.Value] interface. The given value must be a correctly formatted [time.RFC3339] timestamp.

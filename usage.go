@@ -4,6 +4,8 @@ import (
 	"cmp"
 	"errors"
 	"flag"
+	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 	"text/template"
@@ -15,11 +17,18 @@ const DefaultHelpTemplate = `{{ trim .Command.HelpText }}{{ println }}{{ println
 
 // DefaultUsageTemplate is a text template for rendering command usage information.
 const DefaultUsageTemplate = `Usage:
-  {{ trim .Command.UsageLine }}
-
-Examples:
-{{ range (lines (trim .Command.ExampleText)) }}  {{ . }}{{ end }}
 {{- println -}}
+{{- printf "  %s" (trim .Command.UsageLine) -}}
+{{- println -}}
+
+{{- with .Command.ExampleText -}}
+	{{- println -}}
+	{{- println "Examples:" -}}
+	{{- range (lines (trim .)) -}}
+		{{- printf "  %s" . -}}
+	{{- end -}}
+	{{- println -}}
+{{- end -}}
 
 {{- with (commands .) -}}
 	{{- println -}}
@@ -63,8 +72,8 @@ Examples:
 			{{- end -}}
 		{{- end -}}
 
-		{{ with (index . 0).DefValue }}
-			{{- printf " (default %s)" . -}}
+		{{ if (not (zero (index . 0))) }}
+			{{- printf " (default %s)" (index . 0).DefValue -}}
 		{{- end -}}
 
 		{{- println -}}
@@ -111,6 +120,7 @@ func help(cmd command, ops *ExecuteOptions) error {
 //   - commands(c):            Collect all subcommands of c into a map, keyed by name.
 //   - flags(c):               Collect all flags of c, organized by flag group name.
 //   - unquote(f):             Call UnquoteUsage on flag f.
+//   - zero(f):                Check if the default value for f is the zero value or not.
 //   - lower(str):             Return string argument in lowercase.
 //   - upper(str):             Return string argument in uppercase.
 //   - split(str):             Split a string.
@@ -124,6 +134,7 @@ func funcs() template.FuncMap {
 		"commands": subcommands,
 		"flags":    flags,
 		"unquote":  unquote,
+		"zero":     zero,
 		"lower":    strings.ToLower,
 		"upper":    strings.ToUpper,
 		"split":    strings.Split,
@@ -234,4 +245,31 @@ func unquote(flg *flag.Flag) []string {
 	}
 
 	return []string{name, usage}
+}
+
+// zero checks if the default value of flg is the zero value for its type. This is used when rendering usage text
+// to render default flag values only when the default value is interesting.
+//
+// This function expects that flg adhere's to the same requirements of the stdlib [flag] package, notably:
+//
+//	The flag package may call the String method with a zero-valued receiver, such as a nil pointer.
+//
+// Flags that don't respect this requirement will result in an error.
+func zero(flg *flag.Flag) (ok bool, err error) {
+	var z reflect.Value
+
+	if typ := reflect.TypeOf(flg.Value); typ.Kind() == reflect.Pointer {
+		z = reflect.New(typ.Elem())
+	} else {
+		z = reflect.Zero(typ)
+	}
+
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("cmder: flag '%s' is backed by a type that does not accept calling String() on the zero value (bug): %v",
+				flg.Name, e)
+		}
+	}()
+
+	return flg.DefValue == z.Interface().(flag.Value).String(), nil
 }
