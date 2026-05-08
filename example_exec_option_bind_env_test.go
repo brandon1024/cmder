@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/brandon1024/cmder"
 )
@@ -12,6 +13,7 @@ import (
 func ExampleWithEnvironmentBinding() {
 	os.Setenv("BINDENV_SHOW_FORMAT", "overridden-by-flag")
 	os.Setenv("BINDENV_SHOW_PAGECOUNT", "20")
+	os.Setenv("BINDENV_SHOW_SINCE", "2m")
 
 	args := []string{"show", "--format=pretty"}
 
@@ -26,6 +28,7 @@ func ExampleWithEnvironmentBinding() {
 	// Output:
 	// format: pretty
 	// page-count: 20
+	// since: 2m0s
 }
 
 const BindEnvHelpText = `
@@ -71,13 +74,15 @@ func GetShowCommand() *cmder.BaseCommand {
 }
 
 var (
-	format string = "default"
-	count  uint   = 10
+	format string        = "default"
+	count  uint          = 10
+	since  time.Duration = time.Minute
 )
 
 func showFlags(fs *flag.FlagSet) {
 	fs.StringVar(&format, "format", format, "output format (default, pretty)")
 	fs.UintVar(&count, "page-count", count, "number of pages")
+	fs.DurationVar(&since, "since", since, "show entries since")
 }
 
 func show(ctx context.Context, args []string) error {
@@ -85,7 +90,7 @@ func show(ctx context.Context, args []string) error {
 	case "default":
 		fmt.Printf("%v %v\n", format, count)
 	case "pretty":
-		fmt.Printf("format: %v\npage-count: %v\n", format, count)
+		fmt.Printf("format: %v\npage-count: %v\nsince: %v\n", format, count, since)
 	default:
 		return fmt.Errorf("illegal format: %s", format)
 	}

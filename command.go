@@ -13,7 +13,7 @@ import (
 //
 //   - If you want to configure setup and teardown routines for a command, see [Initializer] and [Destroyer].
 //   - If your command has subcommands, see [RootCommand].
-//   - If your command has command-life flags and switches, see [FlagInitializer].
+//   - If your command has command-line flags and switches, see [FlagInitializer].
 type Command interface {
 	// All commands are [Runnable] and implement a Run routine.
 	Runnable
