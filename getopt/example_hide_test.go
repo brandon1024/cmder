@@ -44,9 +44,10 @@ func ExampleHide() {
 	fmt.Printf("values: %d %s %s\n", count, output, since.String())
 
 	// Output:
-	//   --count <number> (default 12)
-	//         number of results
-	//   --output <file> (default -)
-	//         output file
+	//   --count=<number> (default 12)
+	//       number of results
+	//
+	//   --output=<file> (default -)
+	//       output file
 	// values: 2025 output.txt 2025-01-01T00:00:00Z
 }

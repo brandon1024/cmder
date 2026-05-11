@@ -7,6 +7,9 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/brandon1024/cmder/internal/tutil"
 )
 
 func TestPosixFlagSet(t *testing.T) {
@@ -675,6 +678,24 @@ func TestPosixFlagSet(t *testing.T) {
 			}
 		})
 
+		t.Run("should return an error if relaxed parsing enabled but arg is ambiguous", func(t *testing.T) {
+			var autoGc, autoMaintenance bool
+
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
+			fs.RelaxedParsing = true
+
+			fs.BoolVar(&autoGc, "auto-gc", false, "enable automatic garbage collection")
+			fs.BoolVar(&autoMaintenance, "auto-maintenance", false, "enable automatic maintenance")
+
+			err := fs.Parse([]string{"--auto"})
+			if err == nil {
+				t.Fatalf("expected error but was nil")
+			}
+			if !strings.Contains(err.Error(), "flag '--auto' does not exist") {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+
 		t.Run("should not parse long format flags with short names", func(t *testing.T) {
 			var output string
 
@@ -774,11 +795,11 @@ func TestPosixFlagSet(t *testing.T) {
 			fs := NewPosixFlagSet("test", flag.ContinueOnError)
 			fs.SetOutput(&buf)
 
-			fs.Uint("c", 12, "number of results")
+			fs.Uint("c", 12, "`number` of results")
 
 			fs.PrintDefaults()
 
-			expected := "   -c <uint> (default 12)\n        number of results\n"
+			expected := "  -c <number> (default 12)\n      number of results\n"
 			if buf.String() != expected {
 				t.Fatalf("unexpected usage string: '%s'", buf.String())
 			}
@@ -794,7 +815,7 @@ func TestPosixFlagSet(t *testing.T) {
 
 			fs.PrintDefaults()
 
-			expected := "  --count <uint> (default 12)\n        number of results\n"
+			expected := "  --count=<uint> (default 12)\n      number of results\n"
 			if buf.String() != expected {
 				t.Fatalf("unexpected usage string: '%s'", buf.String())
 			}
@@ -810,7 +831,7 @@ func TestPosixFlagSet(t *testing.T) {
 
 			fs.PrintDefaults()
 
-			expected := "  --count <number> (default 12)\n        number of results\n"
+			expected := "  --count=<number> (default 12)\n      number of results\n"
 			if buf.String() != expected {
 				t.Fatalf("unexpected usage string: '%s'", buf.String())
 			}
@@ -826,27 +847,271 @@ func TestPosixFlagSet(t *testing.T) {
 			fs.Uint("c", 12, "`number` of results")
 			fs.String("output", "-", "output `file`")
 			fs.String("o", "-", "output `file`")
-			fs.Bool("all", false, "show `all`")
+			fs.Bool("all", true, "show `all`")
 			fs.Bool("a", false, "show `all`")
 
 			fs.PrintDefaults()
 
-			expected := `   -a (default false)
-        show all
-  --all (default false)
-        show all
-   -c <number> (default 12)
-        number of results
-  --count <number> (default 12)
-        number of results
-   -o <file> (default -)
-        output file
-  --output <file> (default -)
-        output file
+			expected := `  -a
+      show all
+
+  --all (default true)
+      show all
+
+  -c <number> (default 12)
+      number of results
+
+  --count=<number> (default 12)
+      number of results
+
+  -o <file> (default -)
+      output file
+
+  --output=<file> (default -)
+      output file
 `
 			if buf.String() != expected {
 				t.Fatalf("unexpected usage string: '%s'", buf.String())
 			}
+		})
+	})
+
+	t.Run("group", func(t *testing.T) {
+		t.Run("should group bool flags", func(t *testing.T) {
+			fs := NewPosixFlagSet("cmd", flag.ContinueOnError)
+			fs.Bool("all", false, "bool flag")
+			Alias(fs.FlagSet, "all", "a")
+			Alias(fs.FlagSet, "a", "l")
+			fs.Bool("show", false, "bool flag")
+
+			groups := fs.group()
+			tutil.Assert(t, tutil.Eq(2, len(groups)))
+
+			group, ok := groups["all"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(3, len(group)))
+			tutil.Assert(t, tutil.Eq("a", group[0].Name))
+			tutil.Assert(t, tutil.Eq("l", group[1].Name))
+			tutil.Assert(t, tutil.Eq("all", group[2].Name))
+
+			group, ok = groups["show"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(1, len(group)))
+			tutil.Assert(t, tutil.Eq("show", group[0].Name))
+		})
+
+		t.Run("should group string flags", func(t *testing.T) {
+			fs := NewPosixFlagSet("cmd", flag.ContinueOnError)
+			fs.String("from", "HEAD^", "string flag")
+			Alias(fs.FlagSet, "from", "b")
+			Alias(fs.FlagSet, "from", "B")
+			fs.String("to", "HEAD", "string flag")
+
+			groups := fs.group()
+			tutil.Assert(t, tutil.Eq(2, len(groups)))
+
+			group, ok := groups["from"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(3, len(group)))
+			tutil.Assert(t, tutil.Eq("B", group[0].Name))
+			tutil.Assert(t, tutil.Eq("b", group[1].Name))
+			tutil.Assert(t, tutil.Eq("from", group[2].Name))
+
+			group, ok = groups["to"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(1, len(group)))
+			tutil.Assert(t, tutil.Eq("to", group[0].Name))
+		})
+
+		t.Run("should group duration flags", func(t *testing.T) {
+			fs := NewPosixFlagSet("cmd", flag.ContinueOnError)
+			fs.Duration("since", time.Minute, "duration flag")
+			Alias(fs.FlagSet, "since", "s")
+			Alias(fs.FlagSet, "since", "f")
+			fs.Duration("until", time.Duration(0), "duration flag")
+
+			groups := fs.group()
+			tutil.Assert(t, tutil.Eq(2, len(groups)))
+
+			group, ok := groups["since"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(3, len(group)))
+			tutil.Assert(t, tutil.Eq("f", group[0].Name))
+			tutil.Assert(t, tutil.Eq("s", group[1].Name))
+			tutil.Assert(t, tutil.Eq("since", group[2].Name))
+
+			group, ok = groups["until"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(1, len(group)))
+			tutil.Assert(t, tutil.Eq("until", group[0].Name))
+		})
+
+		t.Run("should group float flags", func(t *testing.T) {
+			fs := NewPosixFlagSet("cmd", flag.ContinueOnError)
+			fs.Float64("epsilon", 0.00001, "float64 flag")
+			Alias(fs.FlagSet, "epsilon", "e")
+			Alias(fs.FlagSet, "e", "ep")
+			fs.Float64("gamma", 0.01, "float64 flag")
+
+			groups := fs.group()
+			tutil.Assert(t, tutil.Eq(2, len(groups)))
+
+			group, ok := groups["epsilon"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(3, len(group)))
+			tutil.Assert(t, tutil.Eq("e", group[0].Name))
+			tutil.Assert(t, tutil.Eq("ep", group[1].Name))
+			tutil.Assert(t, tutil.Eq("epsilon", group[2].Name))
+
+			group, ok = groups["gamma"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(1, len(group)))
+			tutil.Assert(t, tutil.Eq("gamma", group[0].Name))
+		})
+
+		t.Run("should group int flags", func(t *testing.T) {
+			fs := NewPosixFlagSet("cmd", flag.ContinueOnError)
+			fs.Int("page", 0, "int flag")
+			Alias(fs.FlagSet, "page", "p")
+			fs.Int("count", 100, "int flag")
+			Alias(fs.FlagSet, "count", "c")
+
+			groups := fs.group()
+			tutil.Assert(t, tutil.Eq(2, len(groups)))
+
+			group, ok := groups["page"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("p", group[0].Name))
+			tutil.Assert(t, tutil.Eq("page", group[1].Name))
+
+			group, ok = groups["count"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("c", group[0].Name))
+			tutil.Assert(t, tutil.Eq("count", group[1].Name))
+		})
+
+		t.Run("should group int64 flags", func(t *testing.T) {
+			fs := NewPosixFlagSet("cmd", flag.ContinueOnError)
+			fs.Int64("page", 0, "int64 flag")
+			Alias(fs.FlagSet, "page", "a")
+			fs.Int64("count", 100, "int64 flag")
+			Alias(fs.FlagSet, "count", "b")
+
+			groups := fs.group()
+			tutil.Assert(t, tutil.Eq(2, len(groups)))
+
+			group, ok := groups["page"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("a", group[0].Name))
+			tutil.Assert(t, tutil.Eq("page", group[1].Name))
+
+			group, ok = groups["count"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("b", group[0].Name))
+			tutil.Assert(t, tutil.Eq("count", group[1].Name))
+		})
+
+		t.Run("should group uint flags", func(t *testing.T) {
+			fs := NewPosixFlagSet("cmd", flag.ContinueOnError)
+			fs.Uint("page", 0, "uint flag")
+			Alias(fs.FlagSet, "page", "x")
+			fs.Uint("count", 100, "uint flag")
+			Alias(fs.FlagSet, "count", "y")
+
+			groups := fs.group()
+			tutil.Assert(t, tutil.Eq(2, len(groups)))
+
+			group, ok := groups["page"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("x", group[0].Name))
+			tutil.Assert(t, tutil.Eq("page", group[1].Name))
+
+			group, ok = groups["count"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("y", group[0].Name))
+			tutil.Assert(t, tutil.Eq("count", group[1].Name))
+		})
+
+		t.Run("should group uint64 flags", func(t *testing.T) {
+			fs := NewPosixFlagSet("cmd", flag.ContinueOnError)
+			fs.Uint64("page", 0, "uint64 flag")
+			Alias(fs.FlagSet, "page", "px")
+			fs.Uint64("count", 100, "uint64 flag")
+			Alias(fs.FlagSet, "count", "cx")
+
+			groups := fs.group()
+			tutil.Assert(t, tutil.Eq(2, len(groups)))
+
+			group, ok := groups["page"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("px", group[0].Name))
+			tutil.Assert(t, tutil.Eq("page", group[1].Name))
+
+			group, ok = groups["count"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("cx", group[0].Name))
+			tutil.Assert(t, tutil.Eq("count", group[1].Name))
+		})
+
+		t.Run("should group mapvar flags", func(t *testing.T) {
+			fs := NewPosixFlagSet("cmd", flag.ContinueOnError)
+			fs.Var(MapVar{}, "arg", "mapvar flag")
+			Alias(fs.FlagSet, "arg", "a")
+			fs.Var(MapVar{}, "template", "mapvar flag")
+			Alias(fs.FlagSet, "template", "t")
+
+			groups := fs.group()
+			tutil.Assert(t, tutil.Eq(2, len(groups)))
+
+			group, ok := groups["arg"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("a", group[0].Name))
+			tutil.Assert(t, tutil.Eq("arg", group[1].Name))
+
+			group, ok = groups["template"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("t", group[0].Name))
+			tutil.Assert(t, tutil.Eq("template", group[1].Name))
+		})
+
+		t.Run("should group func flags", func(t *testing.T) {
+			fn1 := func(v string) error {
+				return nil
+			}
+			fn2 := func(v string) error {
+				return nil
+			}
+
+			fs := NewPosixFlagSet("cmd", flag.ContinueOnError)
+			fs.BoolFunc("verbose", "bool func flag", fn1)
+			Alias(fs.FlagSet, "verbose", "v")
+			fs.Func("optimize", "func flag", fn2)
+			Alias(fs.FlagSet, "optimize", "O")
+
+			groups := fs.group()
+			tutil.Assert(t, tutil.Eq(2, len(groups)))
+
+			group, ok := groups["verbose"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("v", group[0].Name))
+			tutil.Assert(t, tutil.Eq("verbose", group[1].Name))
+
+			group, ok = groups["optimize"]
+			tutil.Assert(t, tutil.Eq(true, ok))
+			tutil.Assert(t, tutil.Eq(2, len(group)))
+			tutil.Assert(t, tutil.Eq("O", group[0].Name))
+			tutil.Assert(t, tutil.Eq("optimize", group[1].Name))
 		})
 	})
 }

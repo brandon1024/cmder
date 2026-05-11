@@ -1,11 +1,15 @@
 package getopt
 
 import (
+	"cmp"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"reflect"
+	"slices"
 	"strings"
+	"text/template"
 )
 
 // PosixFlagSet a wrapper over the standard [flag.FlagSet] that parses arguments with getopt-style (GNU/POSIX) semantics
@@ -105,50 +109,74 @@ func NewPosixFlagSet(name string, e flag.ErrorHandling) *PosixFlagSet {
 	}
 }
 
-// PrintDefaults prints usage information and default values for all flags of this flag set to the output location
-// configured with [flag.FlagSet.Init] or [flag.FlagSet.SetOutput].
+// PrintDefaults writes usage information and default values for all flags in the flag set to the output configured by
+// [flag.FlagSet.Init] or [flag.FlagSet.SetOutput].
+//
+// Unlike [flag.FlagSet.PrintDefaults] in the standard library, this method formats flags using GNU/POSIX conventions,
+// such as '-a' for short options and '--all' for long options.
+//
+// Flags are grouped by [flag.Value] equivalence so that aliases appear together in the usage text. For example, a short
+// flag may be an alias of a long flag (see [Alias]):
+//
+//	-a <string>, --addr=<string>
+//	-s <string>, --serial-number=<string>
+//
+// Hidden flags, created with [Hide], are omitted from the output.
 func (f *PosixFlagSet) PrintDefaults() {
-	f.VisitAll(func(flg *flag.Flag) {
-		var err error
+	format := `
+		{{- $print_started := false -}}
 
-		if isHiddenFlag(flg) {
-			return
-		}
+		{{- range . -}}
+			{{- if $print_started -}}
+				{{- println -}}
+			{{- end -}}
+			{{- $print_started = true -}}
 
-		name, usage := flag.UnquoteUsage(flg)
+			{{- printf "  " -}}
 
-		if len(flg.Name) == 1 {
-			_, err = fmt.Fprintf(f.Output(), "   -%s", flg.Name)
-		} else {
-			_, err = fmt.Fprintf(f.Output(), "  --%s", flg.Name)
-		}
+			{{- range $index, $flg := . -}}
+				{{- if (ne $index 0) -}}
+					{{- printf ", " -}}
+				{{- end -}}
 
-		if err != nil {
-			panic(err)
-		}
+				{{- if (eq (len $flg.Name) 1) -}}
+					{{- printf "-%s" .Name -}}
+				{{- else -}}
+					{{- printf "--%s" .Name -}}
+				{{- end -}}
 
-		if len(name) > 0 && !isBoolFlag(flg) {
-			_, err = fmt.Fprintf(f.Output(), " <%s>", name)
-		}
+				{{- $name := (index (unquote $flg) 0) -}}
 
-		if err != nil {
-			panic(err)
-		}
+				{{- if (bool $flg) -}}
+				{{- else if (and $name (eq (len $flg.Name) 1)) -}}
+					{{- printf " <%s>" $name -}}
+				{{- else if $name -}}
+					{{- printf "=<%s>" $name -}}
+				{{- end -}}
+			{{- end -}}
 
-		if len(flg.DefValue) > 0 {
-			_, err = fmt.Fprintf(f.Output(), " (default %s)", flg.DefValue)
-		}
+			{{ if (not (zero (index . 0))) }}
+				{{- printf " (default %s)" (index . 0).DefValue -}}
+			{{- end -}}
 
-		if err != nil {
-			panic(err)
-		}
+			{{- println -}}
 
-		_, err = fmt.Fprintf(f.Output(), "\n        %s\n", usage)
+			{{- printf "      %s\n" (index (unquote (index . 0)) 1) -}}
+		{{- end -}}`
 
-		if err != nil {
-			panic(err)
-		}
-	})
+	tmpl, err := template.New("usage").Funcs(template.FuncMap{
+		"unquote": unquote,
+		"zero":    zero,
+		"bool":    isBoolFlag,
+	}).Parse(format)
+	if err != nil {
+		panic(err)
+	}
+
+	err = tmpl.Execute(f.Output(), f.group())
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Arg returns the i'th remaining argument after calling [PosixFlagSet.Parse]. Returns an empty string if the argument does
@@ -184,7 +212,7 @@ func (f *PosixFlagSet) Parsed() bool {
 func (f *PosixFlagSet) Parse(arguments []string) error {
 	usage := f.Usage
 	if usage == nil {
-		usage = f.PrintDefaults
+		usage = f.defaultUsage
 	}
 
 	err := f.parse(arguments)
@@ -379,4 +407,135 @@ func (f *PosixFlagSet) lookupLong(name string, relaxed bool) *flag.Flag {
 	}
 
 	return flags[0]
+}
+
+// group organizes the flags and returns them.
+//
+// The flags are grouped by [flag.Value] equivalence. This allows flags to be grouped together in the rendered
+// usage text when two flags are aliases of each other. This is often the case for short flags which are aliases of
+// longer flags (e.g. '-a' is an alias of '--all').
+//
+//	-a <string>, --addr=<string>
+//	-s <string>, --serial-number=<string>
+//
+// The resulting map entries are keyed by the flag group name, which is the longest flag name in the group. The map
+// values are slices of (one or more) flags in the flag group, sorted by flag name length ('-a' before '--all').
+//
+// Hidden flags are excluded from the resulting map.
+func (f *PosixFlagSet) group() map[string][]*flag.Flag {
+	var collected []*flag.Flag
+
+	f.VisitAll(func(f *flag.Flag) {
+		if !isHiddenFlag(f) {
+			collected = append(collected, f)
+		}
+	})
+
+	// sort flags by name length in descending order to ensure that keys in resulting map will use long names first
+	slices.SortFunc(collected, func(a, b *flag.Flag) int {
+		return cmp.Compare(len(b.Name), len(a.Name))
+	})
+
+	groups := map[string][]*flag.Flag{}
+
+	for len(collected) > 0 {
+		var flg *flag.Flag
+
+		// pop the head of the slice
+		flg, collected = collected[0], collected[1:]
+
+		// update groups
+		groups[flg.Name] = []*flag.Flag{flg}
+
+		// traverse the flags again and find (and remove) any which match flg
+		for i := len(collected) - 1; i >= 0; i-- {
+			other := collected[i]
+
+			if areSame(flg.Value, other.Value) {
+				groups[flg.Name] = append(groups[flg.Name], other)
+				collected = append(collected[:i], collected[i+1:]...)
+			}
+		}
+
+		// sort by length (then lexical order), this time ascending (-a before --all)
+		slices.SortFunc(groups[flg.Name], func(a, b *flag.Flag) int {
+			if c := cmp.Compare(len(a.Name), len(b.Name)); c != 0 {
+				return c
+			}
+
+			return cmp.Compare(a.Name, b.Name)
+		})
+	}
+
+	return groups
+}
+
+// defaultUsage is the default usage renderer invoked when parsing fails, invoked when [PosixFlagSet.Usage] is nil.
+func (f *PosixFlagSet) defaultUsage() {
+	name := f.Name()
+
+	if name == "" {
+		_, _ = fmt.Fprintf(f.Output(), "Usage:\n")
+	} else {
+		_, _ = fmt.Fprintf(f.Output(), "Usage of %s:\n", name)
+	}
+
+	f.PrintDefaults()
+}
+
+// unquote is a wrapper over the standard [flag.UnquoteUsage] which returns a slice, allowing it to be used as a
+// template func.
+func unquote(flg *flag.Flag) []string {
+	name, usage := flag.UnquoteUsage(flg)
+	return []string{name, usage}
+}
+
+// zero checks if the default value of flg is the zero value for its type. This is used when rendering usage text
+// to render default flag values only when the default value is interesting.
+//
+// This function expects that flg adhere's to the same requirements of the stdlib [flag] package, notably:
+//
+//	The flag package may call the String method with a zero-valued receiver, such as a nil pointer.
+//
+// Flags that don't respect this requirement will result in an error.
+func zero(flg *flag.Flag) (ok bool, err error) {
+	var z reflect.Value
+
+	if typ := reflect.TypeOf(flg.Value); typ.Kind() == reflect.Pointer {
+		z = reflect.New(typ.Elem())
+	} else {
+		z = reflect.Zero(typ)
+	}
+
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("cmder: flag '%s' is backed by a type that does not accept calling String() on the zero value (bug): %v",
+				flg.Name, e)
+		}
+	}()
+
+	ok = flg.DefValue == z.Interface().(flag.Value).String()
+	return
+}
+
+// areSame check if f1 and f2 have the same underlying [flag.Value].
+func areSame(f1, f2 flag.Value) bool {
+	var (
+		ref1 = reflect.ValueOf(f1)
+		ref2 = reflect.ValueOf(f2)
+	)
+
+	if ref1.Comparable() && ref2.Comparable() && f1 == f2 {
+		return true
+	}
+
+	if ref1.Kind() != ref2.Kind() {
+		return false
+	}
+
+	if !slices.Contains([]reflect.Kind{reflect.Map, reflect.Pointer, reflect.Func, reflect.Slice}, ref1.Kind()) {
+		return false
+	}
+
+	return ref1.Pointer() == ref2.Pointer()
 }

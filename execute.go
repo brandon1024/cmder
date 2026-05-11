@@ -159,7 +159,7 @@ func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 		return errors.Join(ErrShowUsage, usage(c, ops))
 	}
 	if c.showHelp {
-		return errors.Join(ErrShowUsage, help(c, ops))
+		return errors.Join(ErrShowHelp, help(c, ops))
 	}
 
 	if cmd, ok := c.Command.(Initializer); ok {
@@ -168,6 +168,9 @@ func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 
 	if errors.Is(err, ErrShowUsage) {
 		return errors.Join(err, usage(c, ops))
+	}
+	if errors.Is(err, ErrShowHelp) {
+		return errors.Join(err, help(c, ops))
 	}
 
 	return err
@@ -179,12 +182,16 @@ func (c command) run(ctx context.Context, ops *ExecuteOptions) error {
 		return errors.Join(ErrShowUsage, usage(c, ops))
 	}
 	if c.showHelp {
-		return errors.Join(ErrShowUsage, help(c, ops))
+		return errors.Join(ErrShowHelp, help(c, ops))
 	}
 
 	err := c.Run(ctx, c.args)
+
 	if errors.Is(err, ErrShowUsage) {
 		return errors.Join(err, usage(c, ops))
+	}
+	if errors.Is(err, ErrShowHelp) {
+		return errors.Join(err, help(c, ops))
 	}
 
 	return err
@@ -200,6 +207,9 @@ func (c command) onDestroy(ctx context.Context, ops *ExecuteOptions) error {
 
 	if errors.Is(err, ErrShowUsage) {
 		return errors.Join(err, usage(c, ops))
+	}
+	if errors.Is(err, ErrShowHelp) {
+		return errors.Join(err, help(c, ops))
 	}
 
 	return err
@@ -220,6 +230,8 @@ func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 			Command: cmd,
 			fs:      flag.NewFlagSet(cmd.Name(), flag.ContinueOnError),
 		}
+
+		this.fs.Usage = func() {}
 
 		if c, ok := cmd.(FlagInitializer); ok {
 			c.InitializeFlags(this.fs)
@@ -267,7 +279,11 @@ func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 
 // parseArgs processes args for the given command, returning the unparsed (remaining) arguments.
 func parseArgs(cmd command, args []string, ops *ExecuteOptions) ([]string, error) {
-	var fp flagParser = &getopt.PosixFlagSet{FlagSet: cmd.fs, RelaxedParsing: ops.relaxedFlags}
+	var fp flagParser = &getopt.PosixFlagSet{
+		FlagSet:        cmd.fs,
+		RelaxedParsing: ops.relaxedFlags,
+		Usage:          func() {},
+	}
 
 	if ops.nativeFlags {
 		fp = cmd.fs
