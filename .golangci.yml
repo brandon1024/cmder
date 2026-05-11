@@ -15,8 +15,8 @@ linters:
     - staticcheck
   exclusions:
     rules:
-      # relax error handling in examples
-      - path: example_(.+)_test\.go
+      # relax error handling in tests and examples
+      - path: (.+)_test\.go
         linters:
           - errcheck
           - gosec

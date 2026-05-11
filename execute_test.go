@@ -2,13 +2,13 @@ package cmder
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/brandon1024/cmder/getopt"
+	"github.com/brandon1024/cmder/internal/tutil"
 )
 
 func TestExecute(t *testing.T) {
@@ -61,14 +61,14 @@ func TestExecute(t *testing.T) {
 				"l2", "--l2f0=253", "000", "--l2f1", "25", "111", "--", "--l2f0=255",
 			}))
 
-			assert(t, nilerr(err))
-			assert(t, eq(255, l0f0))
-			assert(t, eq(27, l0f1))
-			assert(t, eq("254", l1f0))
-			assert(t, eq("26", l1f1))
-			assert(t, eq(253, l2f0))
-			assert(t, eq(25, l2f1))
-			assert(t, match([]string{"000", "111", "--l2f0=255"}, result))
+			tutil.Assert(t, tutil.NilErr(err))
+			tutil.Assert(t, tutil.Eq(255, l0f0))
+			tutil.Assert(t, tutil.Eq(27, l0f1))
+			tutil.Assert(t, tutil.Eq("254", l1f0))
+			tutil.Assert(t, tutil.Eq("26", l1f1))
+			tutil.Assert(t, tutil.Eq(253, l2f0))
+			tutil.Assert(t, tutil.Eq(25, l2f1))
+			tutil.Assert(t, tutil.Match([]string{"000", "111", "--l2f0=255"}, result))
 		})
 
 		t.Run("should not parse interspersed by default", func(t *testing.T) {
@@ -81,14 +81,14 @@ func TestExecute(t *testing.T) {
 				"l2", "--l2f0=253", "000", "--l2f1", "25", "111", "--", "--l2f0=255",
 			}))
 
-			assert(t, nilerr(err))
-			assert(t, eq(255, l0f0))
-			assert(t, eq(27, l0f1))
-			assert(t, eq("254", l1f0))
-			assert(t, eq("26", l1f1))
-			assert(t, eq(253, l2f0))
-			assert(t, eq(0, l2f1))
-			assert(t, match([]string{"000", "--l2f1", "25", "111", "--", "--l2f0=255"}, result))
+			tutil.Assert(t, tutil.NilErr(err))
+			tutil.Assert(t, tutil.Eq(255, l0f0))
+			tutil.Assert(t, tutil.Eq(27, l0f1))
+			tutil.Assert(t, tutil.Eq("254", l1f0))
+			tutil.Assert(t, tutil.Eq("26", l1f1))
+			tutil.Assert(t, tutil.Eq(253, l2f0))
+			tutil.Assert(t, tutil.Eq(0, l2f1))
+			tutil.Assert(t, tutil.Match([]string{"000", "--l2f1", "25", "111", "--", "--l2f0=255"}, result))
 		})
 	})
 
@@ -142,15 +142,15 @@ func TestExecute(t *testing.T) {
 				"-http.no-auth", "true",
 			}))
 
-			assert(t, nilerr(err))
-			assert(t, eq("0.0.0.0:8000", addr))
-			assert(t, eq(10*time.Second, readTimeout))
-			assert(t, eq(5*time.Second, writeTimeout))
-			assert(t, eq(8096, maxHeaderBytes))
-			assert(t, eq(65536, maxBodySize))
-			assert(t, eq("U:P", basicAuth))
-			assert(t, eq(false, noAuth))
-			assert(t, match([]string{"-http.no-auth", "true"}, args))
+			tutil.Assert(t, tutil.NilErr(err))
+			tutil.Assert(t, tutil.Eq("0.0.0.0:8000", addr))
+			tutil.Assert(t, tutil.Eq(10*time.Second, readTimeout))
+			tutil.Assert(t, tutil.Eq(5*time.Second, writeTimeout))
+			tutil.Assert(t, tutil.Eq(8096, maxHeaderBytes))
+			tutil.Assert(t, tutil.Eq(65536, maxBodySize))
+			tutil.Assert(t, tutil.Eq("U:P", basicAuth))
+			tutil.Assert(t, tutil.Eq(false, noAuth))
+			tutil.Assert(t, tutil.Match([]string{"-http.no-auth", "true"}, args))
 		})
 	})
 
@@ -167,17 +167,26 @@ func TestExecute(t *testing.T) {
 			}
 
 			err := Execute(t.Context(), cmd, WithArgs([]string{"--help"}))
-			assert(t, nilerr(err))
-			assert(t, eq(true, showHelp))
+			tutil.Assert(t, tutil.NilErr(err))
+			tutil.Assert(t, tutil.Eq(true, showHelp))
 		})
 
-		t.Run("should return ErrShowUsage if help flags not defined", func(t *testing.T) {
+		t.Run("should return ErrShowHelp if help flags not defined by command", func(t *testing.T) {
 			cmd := &BaseCommand{
 				CommandName: "help-cmd",
 			}
 
 			err := Execute(t.Context(), cmd, WithArgs([]string{"--help"}))
-			assert(t, eq(true, errors.Is(err, ErrShowUsage)))
+			tutil.Assert(t, tutil.IsErr(err, ErrShowHelp))
+		})
+
+		t.Run("should return ErrShowUsage if help flags not defined by command", func(t *testing.T) {
+			cmd := &BaseCommand{
+				CommandName: "help-cmd",
+			}
+
+			err := Execute(t.Context(), cmd, WithArgs([]string{"-h"}))
+			tutil.Assert(t, tutil.IsErr(err, ErrShowUsage))
 		})
 	})
 }
