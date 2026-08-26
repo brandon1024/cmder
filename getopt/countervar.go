@@ -21,7 +21,7 @@ type CounterVar[T CounterType] struct {
 	value *T
 }
 
-// Counter Initializes a [CounterVar] with an initial value.
+// Counter initializes a [CounterVar] with an initial value.
 func Counter[T CounterType](value *T) *CounterVar[T] {
 	return &CounterVar[T]{
 		value: value,

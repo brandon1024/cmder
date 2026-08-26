@@ -6,7 +6,10 @@ import (
 )
 
 // Alias is a simple utility for registering flag aliases. A new flag is registered in fs with name alias and the
-// [flag.Value] of a flag named name.
+// [flag.Value] of a flag named name. This is functionally equivalent to:
+//
+//	flg := fs.Lookup(name)
+//	fs.Var(flg.Value, alias, flg.Usage)
 //
 // If flag name doesn't exist in fs, panic.
 func Alias(fs *flag.FlagSet, name, alias string) {
