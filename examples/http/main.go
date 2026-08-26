@@ -12,8 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/brandon1024/cmder"
 	"github.com/brandon1024/cmder/getopt"
 )
@@ -122,7 +120,7 @@ func (c *ServerCommand) Initialize(ctx context.Context, args []string) error {
 	if c.auth && c.basicAuth == "" {
 		var (
 			user = "admin"
-			pass = uuid.New().String()
+			pass = "admin"
 		)
 
 		slog.Info("no credentials configured: using generated basic auth credentials", "user", user, "pass", pass)
@@ -144,6 +142,7 @@ func (c *ServerCommand) Run(ctx context.Context, args []string) error {
 
 	slog.Info("starting web server", "addr", c.addr)
 
+	//nolint:gosec // gosec:disable G118 -- Parent context is cancelled when this shutdown routine executes.
 	go func() {
 		<-ctx.Done()
 

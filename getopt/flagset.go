@@ -448,7 +448,7 @@ func (f *PosixFlagSet) group() map[string][]*flag.Flag {
 		groups[flg.Name] = []*flag.Flag{flg}
 
 		// traverse the flags again and find (and remove) any which match flg
-		for i := len(collected) - 1; i >= 0; i-- {
+		for i := range slices.Backward(collected) {
 			other := collected[i]
 
 			if areSame(flg.Value, other.Value) {
