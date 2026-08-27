@@ -55,8 +55,8 @@ Examples:
   test --poll-interval <sec> --web.disable-exporter-metrics
 
 Available Commands:
-  child-1        First child subcommand for parent
-  child-2        Second child subcommand for parent
+  child-1        First child subcommand for test
+  child-2        Second child subcommand for test
 
 Flags:
   -a <address>, --addr=<address>
@@ -108,8 +108,8 @@ Examples:
   test --poll-interval <sec> --web.disable-exporter-metrics
 
 Available Commands:
-  child-1        First child subcommand for parent
-  child-2        Second child subcommand for parent
+  child-1        First child subcommand for test
+  child-2        Second child subcommand for test
 
 Flags:
   -a address
@@ -142,23 +142,62 @@ Flags:
 Use "test [command] --help" for more information about a command.
 `
 
+const ExpectedDefaultHelpChild = `child-1 - first child command of test
+
+Usage:
+  test child-1 [flags] [args]
+
+Examples:
+  test child-1 --mode active
+
+Flags:
+  --mode=<mode> (default default)
+      select a mode to run (default, active, passive)
+
+Flags for "test":
+  -a <address>, --addr=<address>
+      address and port of the device (e.g. 192.168.1.1:4567)
+
+  -t <key=value>, --arg=<key=value> (default k=v)
+      render template with arguments (key=value)
+
+  -r <value>, --hosts=<value> (default hello,world)
+      specify remote hosts (e.g. tcp://127.0.0.1)
+
+  --reconnect-interval=<duration> (default 1m0s)
+      interval between connection attempts (e.g. 1m)
+
+  -s <serial>, --serial-number=<serial>
+      serial number of the device (e.g. 10293894a)
+
+  --web.disable-exporter-metrics
+      exclude metrics about the exporter itself (go_*)
+
+  --web.listen-address=<string> (default :9090)
+      address on which to expose metrics
+
+  --web.telemetry-path=<string> (default /metrics)
+      path under which to expose metrics
+`
+
 func TestHelp(t *testing.T) {
 	child1 := &BaseCommand{
 		CommandName: "child-1",
 		CommandDocumentation: CommandDocumentation{
-			Usage:     "child-1 [flags] [args]",
-			ShortHelp: "First child subcommand for parent",
-			Help:      desc,
-			Examples:  examples,
+			Usage:     "test child-1 [flags] [args]",
+			ShortHelp: "First child subcommand for test",
+			Help:      "child-1 - first child command of test",
+			Examples:  "test child-1 --mode active",
 		},
 	}
+
 	child2 := &BaseCommand{
 		CommandName: "child-2",
 		CommandDocumentation: CommandDocumentation{
-			Usage:     "child-2 [flags] [args]",
-			ShortHelp: "Second child subcommand for parent",
-			Help:      desc,
-			Examples:  examples,
+			Usage:     "test child-2 [flags] [args]",
+			ShortHelp: "Second child subcommand for test",
+			Help:      "child-2 - second child command of test",
+			Examples:  "test child-1 --mode active",
 		},
 	}
 
@@ -173,35 +212,51 @@ func TestHelp(t *testing.T) {
 		Children: []Command{child1, child2},
 	}
 
-	cmd := command{
+	rootCommand := command{
 		Command: parent,
-		fs:      flag.NewFlagSet("cmd", flag.ContinueOnError),
+		fs:      flag.NewFlagSet("test", flag.ContinueOnError),
 	}
 
-	cmd.fs.String("serial-number", "", "`serial` number of the device (e.g. 10293894a)")
-	getopt.Alias(cmd.fs, "serial-number", "s")
-	cmd.fs.String("addr", "", "`address` and port of the device (e.g. 192.168.1.1:4567)")
-	getopt.Alias(cmd.fs, "addr", "a")
+	rootCommand.fs.String("serial-number", "", "`serial` number of the device (e.g. 10293894a)")
+	getopt.Alias(rootCommand.fs, "serial-number", "s")
+	rootCommand.fs.String("addr", "", "`address` and port of the device (e.g. 192.168.1.1:4567)")
+	getopt.Alias(rootCommand.fs, "addr", "a")
 
-	cmd.fs.Var(getopt.MapVar{"k": "v"}, "arg", "render template with arguments (`key=value`)")
-	getopt.Alias(cmd.fs, "arg", "t")
+	rootCommand.fs.Var(getopt.MapVar{"k": "v"}, "arg", "render template with arguments (`key=value`)")
+	getopt.Alias(rootCommand.fs, "arg", "t")
 
-	cmd.fs.Var(&getopt.StringsVar{"hello", "world"}, "hosts", "specify remote hosts (e.g. tcp://127.0.0.1)")
-	getopt.Alias(cmd.fs, "hosts", "r")
+	rootCommand.fs.Var(&getopt.StringsVar{"hello", "world"}, "hosts", "specify remote hosts (e.g. tcp://127.0.0.1)")
+	getopt.Alias(rootCommand.fs, "hosts", "r")
 
-	cmd.fs.Duration("poll-interval", time.Duration(0), "attempt to poll the device status more frequently than advertised")
-	getopt.Hide(cmd.fs, "poll-interval")
+	rootCommand.fs.Duration("poll-interval", time.Duration(0), "attempt to poll the device status more frequently than advertised")
+	getopt.Hide(rootCommand.fs, "poll-interval")
 
-	cmd.fs.Duration("reconnect-interval", time.Minute, "interval between connection attempts (e.g. 1m)")
-	cmd.fs.String("web.listen-address", ":9090", "address on which to expose metrics")
-	cmd.fs.String("web.telemetry-path", "/metrics", "path under which to expose metrics")
-	cmd.fs.Bool("web.disable-exporter-metrics", false, "exclude metrics about the exporter itself (go_*)")
+	rootCommand.fs.Duration("reconnect-interval", time.Minute, "interval between connection attempts (e.g. 1m)")
+	rootCommand.fs.String("web.listen-address", ":9090", "address on which to expose metrics")
+	rootCommand.fs.String("web.telemetry-path", "/metrics", "path under which to expose metrics")
+	rootCommand.fs.Bool("web.disable-exporter-metrics", false, "exclude metrics about the exporter itself (go_*)")
+
+	child1Command := command{
+		Command: child1,
+		parents: []command{rootCommand},
+		fs:      flag.NewFlagSet("child-1", flag.ContinueOnError),
+	}
+
+	child1Command.fs.String("mode", "default", "select a `mode` to run (default, active, passive)")
+
+	child2Command := command{
+		Command: child2,
+		parents: []command{rootCommand},
+		fs:      flag.NewFlagSet("child-2", flag.ContinueOnError),
+	}
+
+	child2Command.fs.String("format", "json", "select an output format (json, text, none)")
 
 	t.Run("DefaultHelpTemplate", func(t *testing.T) {
 		t.Run("should render correctly", func(t *testing.T) {
 			var buf bytes.Buffer
 
-			err := help(cmd, &ExecuteOptions{
+			err := help(rootCommand, &ExecuteOptions{
 				helpTemplate: DefaultHelpTemplate,
 				outputWriter: &buf,
 			})
@@ -228,7 +283,7 @@ func TestHelp(t *testing.T) {
 
 			var buf bytes.Buffer
 
-			err := help(cmd, &ExecuteOptions{
+			err := help(rootCommand, &ExecuteOptions{
 				helpTemplate: DefaultHelpTemplate,
 				outputWriter: &buf,
 			})
@@ -244,7 +299,7 @@ func TestHelp(t *testing.T) {
 		t.Run("should render with native flags usage format if enabled", func(t *testing.T) {
 			var buf bytes.Buffer
 
-			err := help(cmd, &ExecuteOptions{
+			err := help(rootCommand, &ExecuteOptions{
 				helpTemplate: DefaultHelpTemplate,
 				outputWriter: &buf,
 				nativeFlags:  true,
@@ -254,6 +309,22 @@ func TestHelp(t *testing.T) {
 			t.Logf("result:\n%s", buf.String())
 
 			if diff := cmp.Diff(ExpectedDefaultHelpWithNativeFlags, buf.String()); diff != "" {
+				t.Fatalf("usage text mismatch (-want +got):\n%s", diff)
+			}
+		})
+
+		t.Run("should render flags of parent commands", func(t *testing.T) {
+			var buf bytes.Buffer
+
+			err := help(child1Command, &ExecuteOptions{
+				helpTemplate: DefaultHelpTemplate,
+				outputWriter: &buf,
+			})
+			tutil.Assert(t, tutil.NilErr(err))
+
+			t.Logf("result:\n%s", buf.String())
+
+			if diff := cmp.Diff(ExpectedDefaultHelpChild, buf.String()); diff != "" {
 				t.Fatalf("usage text mismatch (-want +got):\n%s", diff)
 			}
 		})
