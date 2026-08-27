@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -43,6 +44,17 @@ const DefaultUsageTemplate = `Usage:
 	{{- print (flag_usage .) -}}
 {{- end -}}
 
+{{- with (parents .) -}}
+	{{- range . -}}
+		{{- if (flags .) -}}
+			{{- println -}}
+			{{- printf "Flags for \"%s\":\n" .Command.Name -}}
+
+			{{- print (flag_usage (flags .)) -}}
+		{{- end -}}
+	{{- end -}}
+{{- end -}}
+
 {{- if (commands .) -}}
 	{{- println -}}
 	{{- printf "Use \"%s [command] --help\" for more information about a command.\n" .Command.Name -}}
@@ -79,6 +91,7 @@ func help(cmd command, ops *ExecuteOptions) error {
 // The following template functions are available:
 //
 //   - commands(c):            Collect all subcommands of c into a map, keyed by name.
+//   - parents(c):             Return a slice of all parent commands.
 //   - flags(c):               Return the flagset of c.
 //   - flag_usage(fs):         Return the rendered flag usage for the given flagset.
 //   - lower(str):             Return string argument in lowercase.
@@ -92,6 +105,7 @@ func help(cmd command, ops *ExecuteOptions) error {
 func funcs(ops *ExecuteOptions) template.FuncMap {
 	return template.FuncMap{
 		"commands":   subcommands,
+		"parents":    parents,
 		"flags":      flags(ops),
 		"flag_usage": flagUsage,
 		"lower":      strings.ToLower,
@@ -128,6 +142,14 @@ func flags(ops *ExecuteOptions) func(cmd command) any {
 
 		return &getopt.PosixFlagSet{FlagSet: cmd.fs, RelaxedParsing: ops.relaxedFlags}
 	}
+}
+
+// parents returns a slice of all parent commands of cmd. If the command is a root command, returns an empty slice.
+func parents(cmd command) []command {
+	parents := slices.Clone(cmd.parents)
+	slices.Reverse(parents)
+
+	return parents
 }
 
 // flagsetPrinter is a flagset (either [flag.FlagSet] or [getopt.PosixFlagSet]) which can render its usage.

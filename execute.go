@@ -145,6 +145,7 @@ func execute(ctx context.Context, stack []command, ops *ExecuteOptions) error {
 type command struct {
 	Command
 
+	parents   []command
 	fs        *flag.FlagSet
 	args      []string
 	showUsage bool
@@ -228,11 +229,13 @@ func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 	for cmd != nil {
 		this := command{
 			Command: cmd,
+			parents: stack,
 			fs:      flag.NewFlagSet(cmd.Name(), flag.ContinueOnError),
 		}
 
 		this.fs.Usage = func() {}
 
+		// register command flags
 		if c, ok := cmd.(FlagInitializer); ok {
 			c.InitializeFlags(this.fs)
 		}
