@@ -874,6 +874,26 @@ func TestPosixFlagSet(t *testing.T) {
 				t.Fatalf("unexpected usage string: '%s'", buf.String())
 			}
 		})
+
+		t.Run("should correctly format multi-line flag usage strings", func(t *testing.T) {
+			var buf bytes.Buffer
+
+			fs := NewPosixFlagSet("test", flag.ContinueOnError)
+			fs.SetOutput(&buf)
+
+			fs.Int("count", 12, "Configure the `number` of results to display. By default, 12 results are shown.\n"+
+				"                If zero, nothing is shown. If negative, all results are shown.")
+
+			fs.PrintDefaults()
+
+			expected := `  --count=<number> (default 12)
+      Configure the number of results to display. By default, 12 results are shown.
+      If zero, nothing is shown. If negative, all results are shown.
+`
+			if buf.String() != expected {
+				t.Fatalf("unexpected usage string: '%s'", buf.String())
+			}
+		})
 	})
 
 	t.Run("group", func(t *testing.T) {
