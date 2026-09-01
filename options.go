@@ -11,9 +11,10 @@ type ExecuteOptions struct {
 	bindEnvPrefix string
 	interspersed  bool
 
-	usageTemplate string
-	helpTemplate  string
-	outputWriter  io.Writer
+	usageTemplate      string
+	helpTemplate       string
+	secondaryTemplates map[string]string
+	outputWriter       io.Writer
 }
 
 // ExecuteOption is a single option passed to [Execute].
@@ -117,6 +118,19 @@ func WithHelpTemplate(tmpl string) ExecuteOption {
 func WithUsageTemplate(tmpl string) ExecuteOption {
 	return func(ops *ExecuteOptions) {
 		ops.usageTemplate = tmpl
+	}
+}
+
+// WithNamedTemplate registers an additional template with the given name. Additional templates are made available to
+// the base usage/help template, which is rendered with the standard [text/template] package.
+//
+// A common use case is to selectively define or override sections of the rendered output by using {{define ...}},
+// {{block ...}} and {{template ...}} statements.
+//
+// See also [WithHelpTemplate] and [WithUsageTemplate] to override base templates.
+func WithNamedTemplate(name, tmpl string) ExecuteOption {
+	return func(ops *ExecuteOptions) {
+		ops.secondaryTemplates[name] = tmpl
 	}
 }
 

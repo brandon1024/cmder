@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
+	"errors"
 	"flag"
 	"fmt"
 	"hash"
@@ -41,6 +42,83 @@ func ExampleWithRelaxedFlagParsing() {
 	}
 	// Output:
 	// 21db31e27ddc3aef918b031bd978fa78
+}
+
+func ExampleWithNamedTemplate() {
+	args := []string{"--help"}
+
+	// note the usage of "date", "version" and "suite" templates in the title header
+	groffTemplate := `
+.TH {{ .Command.Name }} 1 "{{ template "date" }}" "{{ template "version" }}" "{{ template "suite" }}"
+
+.SH NAME
+
+{{ trim .Command.Name }} - {{ trim .Command.ShortHelpText }}
+
+.SH SYNOPSIS
+
+{{ trim .Command.UsageLine }}
+
+.SH DESCRIPTION
+
+{{ trim .Command.HelpText }}
+
+.SH OPTIONS
+
+-a, --algo=<algorithm>
+	Select hashing algorithm (md5, sha1, sha256).
+
+-c, --rounds=<count>
+	Number of hashing rounds.
+
+.SH EXAMPLES
+
+{{ trim .Command.ExampleText }}
+`
+
+	ops := []cmder.ExecuteOption{
+		cmder.WithArgs(args),
+		cmder.WithHelpTemplate(groffTemplate),
+		cmder.WithNamedTemplate("suite", "hashtools(1)"),
+		cmder.WithNamedTemplate("version", "0.1.2"),
+		cmder.WithNamedTemplate("date", "2006-01-02"),
+	}
+
+	err := cmder.Execute(context.Background(), hasher, ops...)
+	if !errors.Is(err, cmder.ErrShowHelp) {
+		fmt.Printf("unexpected error occurred: %v", err)
+	}
+	// Output:
+	// .TH hash 1 "2006-01-02" "0.1.2" "hashtools(1)"
+	//
+	// .SH NAME
+	//
+	// hash - Simple demonstration of interspersed arg parsing.
+	//
+	// .SH SYNOPSIS
+	//
+	// hash [<str>...] [<flags>...]
+	//
+	// .SH DESCRIPTION
+	//
+	// 'hash' demonstrates how cmder can be configured to parse args with interspersed args and flags. The command generates
+	// and prints a hash of the concatenated command args.
+	//
+	// .SH OPTIONS
+	//
+	// -a, --algo=<algorithm>
+	// 	Select hashing algorithm (md5, sha1, sha256).
+	//
+	// -c, --rounds=<count>
+	// 	Number of hashing rounds.
+	//
+	// .SH EXAMPLES
+	//
+	// # with interspersed args
+	// hash string-1 -a md5 string-2 -c 10 string-3
+	//
+	// # without interspersed args
+	// hash -a md5 -c 10 string-1 string-2 string-3
 }
 
 const HashDesc = `

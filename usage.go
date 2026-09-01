@@ -15,49 +15,59 @@ import (
 const DefaultHelpTemplate = `{{ trim .Command.HelpText }}{{ println }}{{ println }}` + DefaultUsageTemplate
 
 // DefaultUsageTemplate is a text template for rendering command usage information.
-const DefaultUsageTemplate = `Usage:
-{{- println -}}
-{{- printf "  %s" (trim .Command.UsageLine) -}}
-{{- println -}}
-
-{{- with .Command.ExampleText -}}
-	{{- println -}}
-	{{- println "Examples:" -}}
-	{{- range (lines (trim .)) -}}
-		{{- printf "  %s" . -}}
-	{{- end -}}
+const DefaultUsageTemplate = `
+{{- block "section.synopsis" . -}}
+	{{- println "Usage:" -}}
+	{{- printf "  %s" (trim .Command.UsageLine) -}}
 	{{- println -}}
 {{- end -}}
 
-{{- with (commands .) -}}
-	{{- println -}}
-	{{- println "Available Commands:" -}}
-	{{- range . -}}
-		{{- printf "  %-13s  %s\n" .Name .ShortHelpText -}}
+{{- block "section.examples" . -}}
+	{{- with .Command.ExampleText -}}
+		{{- println -}}
+		{{- println "Examples:" -}}
+		{{- range (lines (trim .)) -}}
+			{{- printf "  %s" . -}}
+		{{- end -}}
+		{{- println -}}
 	{{- end -}}
 {{- end -}}
 
-{{- with (flags .) -}}
-	{{- println -}}
-	{{- println "Flags:" -}}
-
-	{{- print (flag_usage .) -}}
-{{- end -}}
-
-{{- with (parents .) -}}
-	{{- range . -}}
-		{{- if (flags .) -}}
-			{{- println -}}
-			{{- printf "Flags for \"%s\":\n" .Command.Name -}}
-
-			{{- print (flag_usage (flags .)) -}}
+{{- block "section.subcommands" . -}}
+	{{- with (commands .) -}}
+		{{- println -}}
+		{{- println "Available Commands:" -}}
+		{{- range . -}}
+			{{- printf "  %-13s  %s\n" .Name .ShortHelpText -}}
 		{{- end -}}
 	{{- end -}}
 {{- end -}}
 
-{{- if (commands .) -}}
-	{{- println -}}
-	{{- printf "Use \"%s [command] --help\" for more information about a command.\n" .Command.Name -}}
+{{- block "section.options" . -}}
+	{{- with (flags .) -}}
+		{{- println -}}
+		{{- println "Flags:" -}}
+
+		{{- print (flag_usage .) -}}
+	{{- end -}}
+
+	{{- with (parents .) -}}
+		{{- range . -}}
+			{{- if (flags .) -}}
+				{{- println -}}
+				{{- printf "Flags for \"%s\":\n" .Command.Name -}}
+
+				{{- print (flag_usage (flags .)) -}}
+			{{- end -}}
+		{{- end -}}
+	{{- end -}}
+{{- end -}}
+
+{{- block "section.see-also" . -}}
+	{{- if (commands .) -}}
+		{{- println -}}
+		{{- printf "Use \"%s [command] --help\" for more information about a command.\n" .Command.Name -}}
+	{{- end -}}
 {{- end -}}`
 
 // ErrShowUsage instructs cmder to render usage.
@@ -73,7 +83,14 @@ func usage(cmd command, ops *ExecuteOptions) error {
 		return err
 	}
 
-	return tmpl.Execute(ops.outputWriter, cmd)
+	for name, def := range ops.secondaryTemplates {
+		_, err = tmpl.New(name).Parse(def)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tmpl.ExecuteTemplate(ops.outputWriter, "usage", cmd)
 }
 
 // help renders extended help text for a [Command].
@@ -83,7 +100,14 @@ func help(cmd command, ops *ExecuteOptions) error {
 		return err
 	}
 
-	return tmpl.Execute(ops.outputWriter, cmd)
+	for name, def := range ops.secondaryTemplates {
+		_, err = tmpl.New(name).Parse(def)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tmpl.ExecuteTemplate(ops.outputWriter, "help", cmd)
 }
 
 // funcs returns template functions which can be used in usage/help text templates.
