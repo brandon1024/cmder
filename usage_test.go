@@ -86,6 +86,37 @@ Flags:
 Use "test [command] --help" for more information about a command.
 `
 
+const ExpectedDefaultHelpWithOverrides = `cmder - build powerful command-line applications in Go
+
+'cmder' is a simple and flexible library for building command-line interfaces in Go. If you're coming from Cobra and
+have used it for any length of time, you have surely had your fair share of difficulties with the library. 'cmder' will
+feel quite a bit more comfortable and easy to use, and the wide range of examples throughout the project should help
+you get started.
+
+'cmder' takes a very opinionated approach to building command-line interfaces. The library will help you define,
+structure and execute your commands, but that's about it. 'cmder' embraces simplicity because sometimes, less is better.
+
+To define a new command, simply define a type that implements the 'Command' interface. If you want your command to have
+additional behavior like flags or subcommands, simply implement the appropriate interfaces.
+
+Usage:
+  test [subcommands] [flags] [args]
+
+Examples:
+  test --addr <addr> --serial-number <num>
+  test --log.level <level>
+  test --poll-interval <sec> --web.disable-exporter-metrics
+
+Available Commands:
+  child-1        First child subcommand for test
+  child-2        Second child subcommand for test
+
+Flags:
+  None.
+
+Use "test [command] --help" for more information about a command.
+`
+
 const ExpectedDefaultHelpWithNativeFlags = `cmder - build powerful command-line applications in Go
 
 'cmder' is a simple and flexible library for building command-line interfaces in Go. If you're coming from Cobra and
@@ -325,6 +356,25 @@ func TestHelp(t *testing.T) {
 			t.Logf("result:\n%s", buf.String())
 
 			if diff := cmp.Diff(ExpectedDefaultHelpChild, buf.String()); diff != "" {
+				t.Fatalf("usage text mismatch (-want +got):\n%s", diff)
+			}
+		})
+
+		t.Run("should correctly override sections with options", func(t *testing.T) {
+			var buf bytes.Buffer
+
+			err := help(rootCommand, &ExecuteOptions{
+				helpTemplate: DefaultHelpTemplate,
+				secondaryTemplates: map[string]string{
+					"section.options": `{{ printf "\nFlags:\n  None.\n" }}`,
+				},
+				outputWriter: &buf,
+			})
+			tutil.Assert(t, tutil.NilErr(err))
+
+			t.Logf("result:\n%s", buf.String())
+
+			if diff := cmp.Diff(ExpectedDefaultHelpWithOverrides, buf.String()); diff != "" {
 				t.Fatalf("usage text mismatch (-want +got):\n%s", diff)
 			}
 		})

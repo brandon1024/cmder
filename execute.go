@@ -85,10 +85,11 @@ func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 
 	// prepare executor options
 	ops := &ExecuteOptions{
-		args:          os.Args[1:],
-		usageTemplate: DefaultUsageTemplate,
-		helpTemplate:  DefaultHelpTemplate,
-		outputWriter:  os.Stdout,
+		args:               os.Args[1:],
+		usageTemplate:      DefaultUsageTemplate,
+		helpTemplate:       DefaultHelpTemplate,
+		secondaryTemplates: make(map[string]string),
+		outputWriter:       os.Stdout,
 	}
 	for _, f := range op {
 		f(ops)
