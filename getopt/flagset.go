@@ -161,13 +161,17 @@ func (f *PosixFlagSet) PrintDefaults() {
 
 			{{- println -}}
 
-			{{- printf "      %s\n" (index (unquote (index . 0)) 1) -}}
+			{{- range (lines (index (unquote (index . 0)) 1)) -}}
+				{{- printf "      %s\n" (trim .) -}}
+			{{- end -}}
 		{{- end -}}`
 
 	tmpl, err := template.New("usage").Funcs(template.FuncMap{
 		"unquote": unquote,
 		"zero":    zero,
 		"bool":    isBoolFlag,
+		"lines":   strings.Lines,
+		"trim":    strings.TrimSpace,
 	}).Parse(format)
 	if err != nil {
 		panic(err)
