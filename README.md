@@ -4,7 +4,6 @@
 applications in Go.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/brandon1024/cmder.svg)](https://pkg.go.dev/github.com/brandon1024/cmder)
-[![Go Report Card](https://goreportcard.com/badge/github.com/brandon1024/cmder)](https://goreportcard.com/report/github.com/brandon1024/cmder)
 
 ## Overview
 

@@ -16,6 +16,8 @@ const DefaultHelpTemplate = `{{ trim .Command.HelpText }}{{ println }}{{ println
 
 // DefaultUsageTemplate is a text template for rendering command usage information.
 const DefaultUsageTemplate = `
+{{- block "section.header" . -}}{{- end -}}
+
 {{- block "section.synopsis" . -}}
 	{{- println "Usage:" -}}
 	{{- printf "  %s" (trim .Command.UsageLine) -}}
@@ -68,7 +70,10 @@ const DefaultUsageTemplate = `
 		{{- println -}}
 		{{- printf "Use \"%s [command] --help\" for more information about a command.\n" .Command.Name -}}
 	{{- end -}}
-{{- end -}}`
+{{- end -}}
+
+{{- block "section.footer" . -}}{{- end -}}
+`
 
 // ErrShowUsage instructs cmder to render usage.
 var ErrShowUsage = errors.New("cmder: usage requested")
