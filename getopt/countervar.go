@@ -41,7 +41,7 @@ func (c *CounterVar[T]) String() string {
 
 // Set accepts a boolean value. If true, the counter is incremented.
 func (c *CounterVar[T]) Set(value string) error {
-	if c == nil || c.value == nil {
+	if c.value == nil {
 		panic("getopt: nil flag value")
 	}
 

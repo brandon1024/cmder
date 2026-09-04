@@ -23,11 +23,17 @@ func Strings(ss *[]string) *StringsVar {
 }
 
 // String returns the slice, formatted as comma-separated values.
-func (s StringsVar) String() string {
+func (s *StringsVar) String() string {
+	var ss []string
+
+	if s != nil {
+		ss = *s
+	}
+
 	var builder strings.Builder
 
 	w := csv.NewWriter(&builder)
-	if err := w.Write([]string(s)); err != nil {
+	if err := w.Write([]string(ss)); err != nil {
 		panic(err)
 	}
 
@@ -61,6 +67,6 @@ func (s *StringsVar) Set(value string) error {
 
 // Get fulfills the [flag.Getter] interface, allowing typed access to the flag value. In this case, returns a
 // []string.
-func (s StringsVar) Get() any {
-	return []string(s)
+func (s *StringsVar) Get() any {
+	return []string(*s)
 }

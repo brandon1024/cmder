@@ -12,9 +12,36 @@ import (
 )
 
 // DefaultHelpTemplate is a text template for rendering extended command help information.
-const DefaultHelpTemplate = `{{ trim .Command.HelpText }}{{ println }}{{ println }}` + DefaultUsageTemplate
+//
+// This help template is organized into sections, and each section can be overridden with user-provided content. See
+// [WithNamedTemplate]. The following sections can be overridden:
+//
+//   - section.help
+//   - section.header
+//   - section.synopsis
+//   - section.examples
+//   - section.subcommands
+//   - section.options
+//   - section.see-also
+//   - section.footer
+const DefaultHelpTemplate = `
+{{- block "section.help" . -}}
+	{{- println (trim .Command.HelpText) -}}
+	{{- println -}}
+{{- end -}}` + DefaultUsageTemplate
 
 // DefaultUsageTemplate is a text template for rendering command usage information.
+//
+// This usage template is organized into sections, and each section can be overridden with user-provided content. See
+// [WithNamedTemplate]. The following sections can be overridden:
+//
+//   - section.header
+//   - section.synopsis
+//   - section.examples
+//   - section.subcommands
+//   - section.options
+//   - section.see-also
+//   - section.footer
 const DefaultUsageTemplate = `
 {{- block "section.header" . -}}{{- end -}}
 
@@ -83,24 +110,17 @@ var ErrShowHelp = errors.New("cmder: help requested")
 
 // usage renders usage text for a [Command].
 func usage(cmd command, ops *ExecuteOptions) error {
-	tmpl, err := template.New("usage").Funcs(funcs(ops)).Parse(ops.usageTemplate)
-	if err != nil {
-		return err
-	}
-
-	for name, def := range ops.secondaryTemplates {
-		_, err = tmpl.New(name).Parse(def)
-		if err != nil {
-			return err
-		}
-	}
-
-	return tmpl.ExecuteTemplate(ops.outputWriter, "usage", cmd)
+	return render(cmd, ops, ops.usageTemplate)
 }
 
 // help renders extended help text for a [Command].
 func help(cmd command, ops *ExecuteOptions) error {
-	tmpl, err := template.New("help").Funcs(funcs(ops)).Parse(ops.helpTemplate)
+	return render(cmd, ops, ops.helpTemplate)
+}
+
+// render the given template string for cmd.
+func render(cmd command, ops *ExecuteOptions, renderTmpl string) error {
+	tmpl, err := template.New("_out").Funcs(funcs(ops)).Parse(renderTmpl)
 	if err != nil {
 		return err
 	}
@@ -112,7 +132,7 @@ func help(cmd command, ops *ExecuteOptions) error {
 		}
 	}
 
-	return tmpl.ExecuteTemplate(ops.outputWriter, "help", cmd)
+	return tmpl.ExecuteTemplate(ops.outputWriter, "_out", cmd)
 }
 
 // funcs returns template functions which can be used in usage/help text templates.
