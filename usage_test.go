@@ -115,6 +115,8 @@ Flags:
   None.
 
 Use "test [command] --help" for more information about a command.
+
+ENSURE TEMPLATE FUNCS ARE AVAILABLE
 `
 
 const ExpectedDefaultHelpWithNativeFlags = `cmder - build powerful command-line applications in Go
@@ -367,6 +369,7 @@ func TestHelp(t *testing.T) {
 				helpTemplate: DefaultHelpTemplate,
 				secondaryTemplates: map[string]string{
 					"section.options": `{{ printf "\nFlags:\n  None.\n" }}`,
+					"section.footer":  `{{ upper (printf "\nensure template funcs are available\n") }}`,
 				},
 				outputWriter: &buf,
 			})

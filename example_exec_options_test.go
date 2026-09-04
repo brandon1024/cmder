@@ -45,80 +45,57 @@ func ExampleWithRelaxedFlagParsing() {
 }
 
 func ExampleWithNamedTemplate() {
-	args := []string{"--help"}
+	args := []string{"-h"}
 
-	// note the usage of "date", "version" and "suite" templates in the title header
-	groffTemplate := `
-.TH {{ .Command.Name }} 1 "{{ template "date" }}" "{{ template "version" }}" "{{ template "suite" }}"
+	// override 'section.header' from the default usage template
+	header := `
+		{{- define "section.header" -}}
+			{{- println "hash - hash text input" -}}
+			{{- println -}}
+		{{- end -}}
+	`
 
-.SH NAME
-
-{{ trim .Command.Name }} - {{ trim .Command.ShortHelpText }}
-
-.SH SYNOPSIS
-
-{{ trim .Command.UsageLine }}
-
-.SH DESCRIPTION
-
-{{ trim .Command.HelpText }}
-
-.SH OPTIONS
-
--a, --algo=<algorithm>
-	Select hashing algorithm (md5, sha1, sha256).
-
--c, --rounds=<count>
-	Number of hashing rounds.
-
-.SH EXAMPLES
-
-{{ trim .Command.ExampleText }}
-`
+	// custom template, later named 'section.footer'
+	footer := `
+		{{- println -}}
+		{{- println "This tool is freely licensed under a permissive MIT license." -}}
+	`
 
 	ops := []cmder.ExecuteOption{
 		cmder.WithArgs(args),
-		cmder.WithHelpTemplate(groffTemplate),
-		cmder.WithNamedTemplate("suite", "hashtools(1)"),
-		cmder.WithNamedTemplate("version", "0.1.2"),
-		cmder.WithNamedTemplate("date", "2006-01-02"),
+		cmder.WithNamedTemplate("welcome", header),
+		cmder.WithNamedTemplate("section.examples",
+			`{{- printf "\nExamples:\n" }}{{- printf "  hash string-1 -a md5 string-2 -c 10 string-3\n" -}}`),
+		cmder.WithNamedTemplate("section.footer", footer),
 	}
 
 	err := cmder.Execute(context.Background(), hasher, ops...)
-	if !errors.Is(err, cmder.ErrShowHelp) {
+	if !errors.Is(err, cmder.ErrShowUsage) {
 		fmt.Printf("unexpected error occurred: %v", err)
 	}
 	// Output:
-	// .TH hash 1 "2006-01-02" "0.1.2" "hashtools(1)"
+	// hash - hash text input
 	//
-	// .SH NAME
+	// Usage:
+	//   hash [<str>...] [<flags>...]
 	//
-	// hash - Simple demonstration of interspersed arg parsing.
+	// Examples:
+	//   hash string-1 -a md5 string-2 -c 10 string-3
 	//
-	// .SH SYNOPSIS
+	// Flags:
+	//   -a <string>, --algo=<string> (default md5)
+	//       select hashing algorithm (md5, sha1, sha256)
 	//
-	// hash [<str>...] [<flags>...]
+	//   -h
+	//       show command usage information
 	//
-	// .SH DESCRIPTION
+	//   --help
+	//       show command help information
 	//
-	// 'hash' demonstrates how cmder can be configured to parse args with interspersed args and flags. The command generates
-	// and prints a hash of the concatenated command args.
+	//   -c <uint>, --rounds=<uint> (default 10)
+	//       number of hashing rounds
 	//
-	// .SH OPTIONS
-	//
-	// -a, --algo=<algorithm>
-	// 	Select hashing algorithm (md5, sha1, sha256).
-	//
-	// -c, --rounds=<count>
-	// 	Number of hashing rounds.
-	//
-	// .SH EXAMPLES
-	//
-	// # with interspersed args
-	// hash string-1 -a md5 string-2 -c 10 string-3
-	//
-	// # without interspersed args
-	// hash -a md5 -c 10 string-1 string-2 string-3
+	// This tool is freely licensed under a permissive MIT license.
 }
 
 const HashDesc = `

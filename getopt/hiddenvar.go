@@ -42,7 +42,7 @@ func (h *HiddenVar) IsHiddenFlag() bool {
 func (h *HiddenVar) String() string {
 	// if [HiddenVar] is used with the standard [flag.FlagSet], its [PrintDefaults] will call this method on a zero value,
 	// so check the receiver to avoid panics
-	if h == nil || h.Value == nil {
+	if h.Value == nil {
 		return ""
 	}
 
