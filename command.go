@@ -37,7 +37,7 @@ type Runnable interface {
 	// The given [context.Context] is derived from the context provided to Execute() and is cancelled when Execute()
 	// returns. Use this context to cleanup resources.
 	//
-	// The second argument is the list of command-line arguments and switches that remain after parsing flags.
+	// The second argument provides unparsed positional arguments remaining after flag parsing.
 	Run(context.Context, []string) error
 }
 

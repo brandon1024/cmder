@@ -19,7 +19,10 @@ import (
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
-	err := cmder.Execute(ctx, &ServerCommand{})
+	err := cmder.Execute(ctx, &ServerCommand{
+		maxHeaderBytes: http.DefaultMaxHeaderBytes,
+		maxBodySize:    1 << 26,
+	})
 	cancel()
 
 	if errors.Is(err, cmder.ErrShowUsage) || errors.Is(err, cmder.ErrShowHelp) {
@@ -100,10 +103,10 @@ func (c *ServerCommand) InitializeFlags(fs *flag.FlagSet) {
 		"Configures the maximum duration for reading the entire request, including the body (e.g. 10s). Negative or zero (e.g. 0s) disables the timeout.")
 	fs.DurationVar(&c.writeTimeout, "http.write-timeout", time.Duration(0),
 		"Configures the maximum duration for writing a client response. Negative or zero (e.g. 0s) disables the timeout.")
-	fs.IntVar(&c.maxHeaderBytes, "http.max-header-size", http.DefaultMaxHeaderBytes,
-		"Set the maximum header size, in bytes. Negative or zero disables the limit.")
-	fs.Int64Var(&c.maxBodySize, "http.max-body-size", 1<<26,
-		"Set the maximum request body size, in bytes. Negative or zero disables the limit.")
+	fs.Var(getopt.Int(&c.maxHeaderBytes), "http.max-header-size",
+		"Set the maximum header `size`, in bytes. Suffixes like 'M' or 'Ki' are also accepted (e.g. 1.2Mi). Negative or zero disables the limit.")
+	fs.Var(getopt.Int(&c.maxBodySize), "http.max-body-size",
+		"Set the maximum request body `size`, in bytes. Suffixes like 'M' or 'Ki' are also accepted (e.g. 1.2Mi). Negative or zero disables the limit.")
 	fs.StringVar(&c.basicAuth, "http.auth-basic", "",
 		"Configure basic auth credentials with format `user:pass`.")
 

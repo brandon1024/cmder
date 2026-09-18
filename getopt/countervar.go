@@ -5,21 +5,27 @@ import (
 	"strconv"
 )
 
-// CounterType describes all numeric types supported by the [CounterVar] type.
-type CounterType interface {
-	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
-}
+type (
+	// CounterType describes all numeric types supported by the [CounterVar] type.
+	CounterType interface {
+		~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
+	}
 
-// CounterVar is a boolean [flag.Value] which increments a signed or unsigned integer of type T every time it appears at
-// the command line.
-//
-// This type of flag is often used for describing log verbosity, where '-vvv' would be interpreted as setting the log
-// level to 3.
-//
-// To initialize a CounterVar, see [Counter].
-type CounterVar[T CounterType] struct {
-	value *T
-}
+	// CounterVar is a boolean [flag.Value] which increments a signed or unsigned integer of type T every time it appears at
+	// the command line.
+	//
+	// This type of flag is often used for describing log verbosity, where '-vvv' would be interpreted as setting the log
+	// level to 3.
+	//
+	//	var verbosity uint
+	//	fs.Var(getopt.Counter(&verbosity), "v", "increase verbosity")
+	//	fs.Parse([]string{"-vvv"}) // verbosity = 3
+	//
+	// To initialize a CounterVar, see [Counter].
+	CounterVar[T CounterType] struct {
+		value *T
+	}
+)
 
 // Counter initializes a [CounterVar] with an initial value.
 func Counter[T CounterType](value *T) *CounterVar[T] {

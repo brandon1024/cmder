@@ -17,13 +17,11 @@ func ExampleNegatedBoolVar() {
 
 	fs := getopt.NewPosixFlagSet("custom", flag.ContinueOnError)
 
-	// option 1: using NegatedBoolVar directly
-	fs.BoolVar(&sign, "gpg-sign", false, "gpg sign the input")
-	fs.Var((*getopt.NegatedBoolVar)(&sign), "no-gpg-sign", "skip gpg signing")
-
-	// option 2: with NegatedBool
 	fs.BoolVar(&verify, "verify", false, "verify the result")
 	fs.Var(getopt.NegatedBool(&verify), "no-verify", "skip result verification")
+
+	fs.BoolVar(&sign, "gpg-sign", false, "gpg sign the input")
+	fs.Var(getopt.NegatedBool(&sign), "no-gpg-sign", "skip gpg signing")
 
 	fs.SetOutput(os.Stdout)
 	fs.PrintDefaults()

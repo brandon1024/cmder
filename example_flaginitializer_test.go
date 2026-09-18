@@ -59,7 +59,7 @@ type KubectlApply struct {
 	cascade                  string
 	dryRun                   string
 	fieldManager             string
-	filename                 getopt.StringsVar
+	filename                 []string
 	force                    bool
 	forceConflicts           bool
 	gracePeriod              int
@@ -68,7 +68,7 @@ type KubectlApply struct {
 	output                   string
 	overwrite                bool
 	prune                    bool
-	pruneAllowlist           getopt.StringsVar
+	pruneAllowlist           []string
 	recursive                bool
 	selector                 string
 	serverSide               bool
@@ -91,9 +91,9 @@ func (a *KubectlApply) InitializeFlags(fs *flag.FlagSet) {
 		"Must be \"none\", \"server\", or \"client\". If client strategy, only print the object that would be sent, without sending it. If server strategy, submit server-side request without persisting the resource.")
 	fs.StringVar(&a.fieldManager, "field-manager", "kubectl-client-side-apply",
 		"Name of the manager used to track field ownership.")
-	fs.Var(&a.filename, "filename",
+	fs.Var(getopt.Strings(&a.filename), "filename",
 		"The files that contain the configurations to apply.")
-	fs.Var(&a.filename, "f",
+	fs.Var(getopt.Strings(&a.filename), "f",
 		"The files that contain the configurations to apply.")
 	fs.BoolVar(&a.force, "force", false,
 		"If true, immediately remove resources from API and bypass graceful deletion. Note that immediate deletion of some resources may result in inconsistency or data loss and requires confirmation.")
@@ -113,7 +113,7 @@ func (a *KubectlApply) InitializeFlags(fs *flag.FlagSet) {
 		"Automatically resolve conflicts between the modified and live configuration by using values from the modified configuration.")
 	fs.BoolVar(&a.prune, "prune", false,
 		"Automatically delete resource objects, that do not appear in the configs and are created by either apply or create --save-config. Should be used with either -l or --all.")
-	fs.Var(&a.pruneAllowlist, "prune-allowlist",
+	fs.Var(getopt.Strings(&a.pruneAllowlist), "prune-allowlist",
 		"Overwrite the default allowlist with <group/version/kind> for --prune.")
 	fs.BoolVar(&a.recursive, "recursive", false,
 		"Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.")
