@@ -11,6 +11,7 @@ import (
 	"hash"
 
 	"github.com/brandon1024/cmder"
+	"github.com/brandon1024/cmder/getopt"
 )
 
 func ExampleWithInterspersedArgs() {
@@ -136,9 +137,10 @@ type Hasher struct {
 
 func (h *Hasher) InitializeFlags(fs *flag.FlagSet) {
 	fs.StringVar(&h.algo, "algo", h.algo, "select hashing algorithm (md5, sha1, sha256)")
-	fs.StringVar(&h.algo, "a", h.algo, "select hashing algorithm (md5, sha1, sha256)")
 	fs.UintVar(&h.rounds, "rounds", h.rounds, "number of hashing rounds")
-	fs.UintVar(&h.rounds, "c", h.rounds, "number of hashing rounds")
+
+	getopt.Alias(fs, "algo", "a")
+	getopt.Alias(fs, "rounds", "c")
 }
 
 func (h *Hasher) Run(ctx context.Context, args []string) error {

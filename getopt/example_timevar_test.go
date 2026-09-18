@@ -12,12 +12,9 @@ import (
 func ExampleTimeVar() {
 	fs := flag.NewFlagSet("custom", flag.ContinueOnError)
 
-	// option 1: using TimeVar directly
-	var since getopt.TimeVar
-	fs.Var(&since, "since", "show items since")
+	var since, until time.Time
 
-	// option 2: with Time
-	var until time.Time
+	fs.Var(getopt.Time(&since), "since", "show items since")
 	fs.Var(getopt.Time(&until), "until", "show items until")
 
 	args := []string{
@@ -32,6 +29,6 @@ func ExampleTimeVar() {
 	fmt.Printf("since: %s\n", since.String())
 	fmt.Printf("until: %s\n", until.String())
 	// Output:
-	// since: 2025-01-01T00:00:00Z
+	// since: 2025-01-01 00:00:00 +0000 UTC
 	// until: 2026-01-01 00:00:00 +0000 UTC
 }

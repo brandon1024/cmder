@@ -8,8 +8,10 @@ import (
 // NegatedBoolVar is a boolean [flag.Value] for negating other flag values. A typical use case for NegatedBoolVar is to
 // register flags which disable/unset other flags.
 //
-//	--show
-//	--no-show
+//	var verify bool
+//	fs.BoolVar(&verify, "verify", true, "verify the result")
+//	fs.Var(getopt.NegatedBool(&verify), "no-verify", "skip result verification")
+//	fs.Parse([]string{"--no-verify"}) // verify = false
 type NegatedBoolVar bool
 
 // NegatedBool builds a [NegatedBoolVar] backed by b.

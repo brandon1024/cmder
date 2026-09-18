@@ -14,17 +14,12 @@ import (
 func ExampleMapVar() {
 	fs := flag.NewFlagSet("map", flag.ContinueOnError)
 
-	// option 1: use MapVar directly
-	variables := getopt.MapVar{}
-	fs.Var(&variables, "variable", "specify runtime variables")
-
-	// option 2: wrap an existing map with Map
 	arg := map[string]string{}
 	fs.Var(getopt.Map(arg), "arg", "specify runtime args")
 
 	args := []string{
-		"--variable", "key1=value1",
-		"--variable", "key2=value2,key3=value3",
+		"--arg", "key1=value1",
+		"--arg", "key2=value2,key3=value3",
 		`--arg="hello= HI, WORLD "`,
 	}
 
@@ -32,15 +27,12 @@ func ExampleMapVar() {
 		panic(err)
 	}
 
-	for _, k := range slices.Sorted(maps.Keys(variables)) {
-		fmt.Printf("%s: '%s'\n", k, variables[k])
-	}
 	for _, k := range slices.Sorted(maps.Keys(arg)) {
 		fmt.Printf("%s: '%s'\n", k, arg[k])
 	}
 	// Output:
+	// hello: ' HI, WORLD '
 	// key1: 'value1'
 	// key2: 'value2'
 	// key3: 'value3'
-	// hello: ' HI, WORLD '
 }

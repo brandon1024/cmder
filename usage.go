@@ -24,6 +24,9 @@ import (
 //   - section.options
 //   - section.see-also
 //   - section.footer
+//
+// This template is used to render help text by default. You may configure an alternate template with
+// [WithHelpTemplate].
 const DefaultHelpTemplate = `
 {{- block "section.help" . -}}
 	{{- println (trim .Command.HelpText) -}}
@@ -42,6 +45,9 @@ const DefaultHelpTemplate = `
 //   - section.options
 //   - section.see-also
 //   - section.footer
+//
+// This template is used to render usage text by default. You may configure an alternate template with
+// [WithUsageTemplate].
 const DefaultUsageTemplate = `
 {{- block "section.header" . -}}{{- end -}}
 
@@ -139,8 +145,8 @@ func render(cmd command, ops *ExecuteOptions, renderTmpl string) error {
 //
 // The following template functions are available:
 //
-//   - commands(c):            Collect all subcommands of c into a map, keyed by name.
-//   - parents(c):             Return a slice of all parent commands.
+//   - commands(c):            Collect all subcommands of c into a map, keyed by name, which are not hidden.
+//   - parents(c):             Return a slice of all parent commands of c, in descending order of depth.
 //   - flags(c):               Return the flagset of c.
 //   - flag_usage(fs):         Return the rendered flag usage for the given flagset.
 //   - lower(str):             Return string argument in lowercase.
@@ -182,9 +188,13 @@ func subcommands(cmd command) map[string]Command {
 }
 
 // flags returns a template func which produces a flagset (either a standard [flag.FlagSet] or [getopt.PosixFlagSet])
-// according to the options defines in ops.
+// according to the options defines in ops. Returns nil if the command doesn't implement [FlagInitializer].
 func flags(ops *ExecuteOptions) func(cmd command) any {
 	return func(cmd command) any {
+		if _, ok := cmd.Command.(FlagInitializer); !ok {
+			return nil
+		}
+
 		if ops.nativeFlags {
 			return cmd.fs
 		}

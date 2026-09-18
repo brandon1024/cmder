@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/brandon1024/cmder/getopt"
 )
@@ -29,8 +30,8 @@ func ExampleHide() {
 	getopt.Hide(fs.FlagSet, "o")
 
 	// option 3: using FlagSet.Var
-	var since getopt.TimeVar
-	fs.Var(&getopt.HiddenVar{&since}, "since", "show items since")
+	var since time.Time
+	fs.Var(&getopt.HiddenVar{getopt.Time(&since)}, "since", "show items since")
 
 	fs.SetOutput(os.Stdout)
 	fs.PrintDefaults()
@@ -49,5 +50,5 @@ func ExampleHide() {
 	//
 	//   --output=<file> (default -)
 	//       output file
-	// values: 2025 output.txt 2025-01-01T00:00:00Z
+	// values: 2025 output.txt 2025-01-01 00:00:00 +0000 UTC
 }

@@ -91,7 +91,7 @@ func (m *MultiConf) Name() string {
 func (m *MultiConf) InitializeFlags(fs *flag.FlagSet) {
 	fs.StringVar(&m.settings.Format, "format", m.settings.Format, "specify a format")
 	fs.IntVar(&m.settings.Count, "count", m.settings.Count, "specify a count")
-	fs.Var((*getopt.StringsVar)(&m.settings.Args), "args", "provide arguments")
+	fs.Var(getopt.Strings(&m.settings.Args), "args", "provide arguments")
 }
 
 func (m *MultiConf) Run(ctx context.Context, args []string) error {
