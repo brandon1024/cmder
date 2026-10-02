@@ -48,9 +48,3 @@ func (h *HiddenVar) String() string {
 
 	return h.Value.String()
 }
-
-// isHiddenFlag checks if the given flag has a [flag.Value] which indicates that flg is hidden.
-func isHiddenFlag(flg *flag.Flag) bool {
-	hf, ok := flg.Value.(HiddenFlag)
-	return ok && hf.IsHiddenFlag()
-}

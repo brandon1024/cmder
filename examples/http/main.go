@@ -110,6 +110,10 @@ func (c *ServerCommand) InitializeFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.basicAuth, "http.auth-basic", "",
 		"Configure basic auth credentials with format `user:pass`.")
 
+	getopt.Alias(fs, "http.auth-basic", "A")
+	getopt.Alias(fs, "http.max-header-size", "H")
+	getopt.Alias(fs, "http.bind-addr", "b")
+
 	fs.BoolVar(&c.auth, "http.auth", true, "Enable basic auth. Basic auth credentials must be configured with 'http.auth-basic' option.")
 	fs.Var(getopt.NegatedBool(&c.auth), "http.no-auth", "Disable basic auth, making the server available to all.")
 }
