@@ -289,7 +289,7 @@ func TestHelp(t *testing.T) {
 		t.Run("should render correctly", func(t *testing.T) {
 			var buf bytes.Buffer
 
-			err := help(rootCommand, &ExecuteOptions{
+			err := rootCommand.help(&ExecuteOptions{
 				helpTemplate: DefaultHelpTemplate,
 				outputWriter: &buf,
 			})
@@ -316,7 +316,7 @@ func TestHelp(t *testing.T) {
 
 			var buf bytes.Buffer
 
-			err := help(rootCommand, &ExecuteOptions{
+			err := rootCommand.help(&ExecuteOptions{
 				helpTemplate: DefaultHelpTemplate,
 				outputWriter: &buf,
 			})
@@ -332,7 +332,7 @@ func TestHelp(t *testing.T) {
 		t.Run("should render with native flags usage format if enabled", func(t *testing.T) {
 			var buf bytes.Buffer
 
-			err := help(rootCommand, &ExecuteOptions{
+			err := rootCommand.help(&ExecuteOptions{
 				helpTemplate: DefaultHelpTemplate,
 				outputWriter: &buf,
 				nativeFlags:  true,
@@ -349,7 +349,7 @@ func TestHelp(t *testing.T) {
 		t.Run("should render flags of parent commands", func(t *testing.T) {
 			var buf bytes.Buffer
 
-			err := help(child1Command, &ExecuteOptions{
+			err := child1Command.help(&ExecuteOptions{
 				helpTemplate: DefaultHelpTemplate,
 				outputWriter: &buf,
 			})
@@ -365,7 +365,7 @@ func TestHelp(t *testing.T) {
 		t.Run("should correctly override sections with options", func(t *testing.T) {
 			var buf bytes.Buffer
 
-			err := help(rootCommand, &ExecuteOptions{
+			err := rootCommand.help(&ExecuteOptions{
 				helpTemplate: DefaultHelpTemplate,
 				secondaryTemplates: map[string]string{
 					"section.options": `{{ printf "\nFlags:\n  None.\n" }}`,
@@ -578,7 +578,7 @@ func TestUsage(t *testing.T) {
 
 		var buf bytes.Buffer
 
-		err := usage(cmd, &ExecuteOptions{
+		err := cmd.usage(&ExecuteOptions{
 			usageTemplate: DefaultUsageTemplate,
 			outputWriter:  &buf,
 		})

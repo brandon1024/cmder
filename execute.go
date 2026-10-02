@@ -158,10 +158,10 @@ func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 	var err error
 
 	if c.showUsage {
-		return errors.Join(ErrShowUsage, usage(c, ops))
+		return errors.Join(ErrShowUsage, c.usage(ops))
 	}
 	if c.showHelp {
-		return errors.Join(ErrShowHelp, help(c, ops))
+		return errors.Join(ErrShowHelp, c.help(ops))
 	}
 
 	if cmd, ok := c.Command.(Initializer); ok {
@@ -169,10 +169,10 @@ func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 	}
 
 	if errors.Is(err, ErrShowUsage) {
-		return errors.Join(err, usage(c, ops))
+		return errors.Join(err, c.usage(ops))
 	}
 	if errors.Is(err, ErrShowHelp) {
-		return errors.Join(err, help(c, ops))
+		return errors.Join(err, c.help(ops))
 	}
 
 	return err
@@ -181,19 +181,19 @@ func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 // run calls the [Runnable] run routine of c.
 func (c command) run(ctx context.Context, ops *ExecuteOptions) error {
 	if c.showUsage {
-		return errors.Join(ErrShowUsage, usage(c, ops))
+		return errors.Join(ErrShowUsage, c.usage(ops))
 	}
 	if c.showHelp {
-		return errors.Join(ErrShowHelp, help(c, ops))
+		return errors.Join(ErrShowHelp, c.help(ops))
 	}
 
 	err := c.Run(ctx, c.args)
 
 	if errors.Is(err, ErrShowUsage) {
-		return errors.Join(err, usage(c, ops))
+		return errors.Join(err, c.usage(ops))
 	}
 	if errors.Is(err, ErrShowHelp) {
-		return errors.Join(err, help(c, ops))
+		return errors.Join(err, c.help(ops))
 	}
 
 	return err
@@ -208,10 +208,10 @@ func (c command) onDestroy(ctx context.Context, ops *ExecuteOptions) error {
 	}
 
 	if errors.Is(err, ErrShowUsage) {
-		return errors.Join(err, usage(c, ops))
+		return errors.Join(err, c.usage(ops))
 	}
 	if errors.Is(err, ErrShowHelp) {
-		return errors.Join(err, help(c, ops))
+		return errors.Join(err, c.help(ops))
 	}
 
 	return err
