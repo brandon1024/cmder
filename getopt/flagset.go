@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 	"text/template"
 
@@ -145,7 +144,7 @@ func (f *PosixFlagSet) PrintDefaults() {
 					{{- printf "--%s" .Name -}}
 				{{- end -}}
 
-				{{- $name := (index (unquote $flg) 0) -}}
+				{{- $name := (index (flag_unquote $flg) 0) -}}
 
 				{{- if (bool $flg) -}}
 				{{- else if (and $name (eq (len $flg.Name) 1)) -}}
@@ -155,24 +154,21 @@ func (f *PosixFlagSet) PrintDefaults() {
 				{{- end -}}
 			{{- end -}}
 
-			{{ if (not (zero (index . 0))) }}
+			{{ if (not (flag_zero (index . 0))) }}
 				{{- printf " (default %s)" (index . 0).DefValue -}}
 			{{- end -}}
 
 			{{- println -}}
 
-			{{- range (lines (index (unquote (index . 0)) 1)) -}}
-				{{- printf "      %s\n" (trim .) -}}
+			{{- range (wrap (index (flag_unquote (index . 0)) 1) 120) -}}
+				{{- printf "      %s\n" . -}}
 			{{- end -}}
 		{{- end -}}`
 
-	tmpl, err := template.New("usage").Funcs(template.FuncMap{
-		"unquote": unquote,
-		"zero":    zero,
-		"bool":    isBoolFlag,
-		"lines":   strings.Lines,
-		"trim":    strings.TrimSpace,
-	}).Parse(format)
+	funcs := internal.TemplateFuncs()
+	funcs["bool"] = isBoolFlag
+
+	tmpl, err := template.New("usage").Funcs(funcs).Parse(format)
 	if err != nil {
 		panic(err)
 	}
@@ -449,39 +445,4 @@ func (f *PosixFlagSet) defaultUsage() {
 	}
 
 	f.PrintDefaults()
-}
-
-// unquote is a wrapper over the standard [flag.UnquoteUsage] which returns a slice, allowing it to be used as a
-// template func.
-func unquote(flg *flag.Flag) []string {
-	name, usage := flag.UnquoteUsage(flg)
-	return []string{name, usage}
-}
-
-// zero checks if the default value of flg is the zero value for its type. This is used when rendering usage text
-// to render default flag values only when the default value is interesting.
-//
-// This function expects that flg adhere's to the same requirements of the stdlib [flag] package, notably:
-//
-//	The flag package may call the String method with a zero-valued receiver, such as a nil pointer.
-//
-// Flags that don't respect this requirement will result in an error.
-func zero(flg *flag.Flag) (ok bool, err error) {
-	var z reflect.Value
-
-	if typ := reflect.TypeOf(flg.Value); typ.Kind() == reflect.Pointer {
-		z = reflect.New(typ.Elem())
-	} else {
-		z = reflect.Zero(typ)
-	}
-
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("cmder: flag '%s' is backed by a type that does not accept calling String() on the zero value (bug): %v",
-				flg.Name, e)
-		}
-	}()
-
-	ok = flg.DefValue == z.Interface().(flag.Value).String()
-	return
 }
