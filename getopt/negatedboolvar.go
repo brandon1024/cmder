@@ -1,7 +1,6 @@
 package getopt
 
 import (
-	"flag"
 	"strconv"
 )
 
@@ -43,17 +42,4 @@ func (b *NegatedBoolVar) IsBoolFlag() bool {
 // Get fulfills the [flag.Getter] interface, allowing typed access to the flag value. In this case, returns a bool.
 func (b *NegatedBoolVar) Get() any {
 	return !bool(*b)
-}
-
-// boolFlag is a [flag.Value] that also implements a method IsBoolFlag, used to determine if the flag accepts an
-// argument or not.
-type boolFlag interface {
-	flag.Value
-	IsBoolFlag() bool
-}
-
-// isBoolFlag checks if the given flag has a [flag.Value] which is a boolean flag.
-func isBoolFlag(flg *flag.Flag) bool {
-	bf, ok := flg.Value.(boolFlag)
-	return ok && bf.IsBoolFlag()
 }

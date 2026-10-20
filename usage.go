@@ -1,12 +1,9 @@
 package cmder
 
 import (
-	"bytes"
 	"errors"
 	"flag"
-	"io"
 	"slices"
-	"strings"
 	"text/template"
 
 	"github.com/brandon1024/cmder/getopt"
@@ -261,22 +258,13 @@ func render(cmd command, ops *ExecuteOptions, renderTmpl string) error {
 //	  - trim(str):              Trim all leading and trailing whitespace of str.
 //	  - lines(str):             Split str into a slice of text lines.
 func funcs(ops *ExecuteOptions) template.FuncMap {
-	return template.FuncMap{
-		"commands":            subcommands,
-		"parents":             parents,
-		"flagset":             flagset(ops),
-		"flagset_usage":       flagsetUsage,
-		"flagset_flag_groups": flagsetGroup,
-		"flag_unquote":        flagUnquote,
-		"lower":               strings.ToLower,
-		"upper":               strings.ToUpper,
-		"split":               strings.Split,
-		"replace":             strings.ReplaceAll,
-		"join":                strings.Join,
-		"contains":            strings.Contains,
-		"trim":                strings.TrimSpace,
-		"lines":               strings.Lines,
-	}
+	fns := internal.TemplateFuncs()
+	fns["commands"] = subcommands
+	fns["parents"] = parents
+	fns["flagset"] = flagset(ops)
+	fns["flagset_flag_groups"] = flagsetGroup
+
+	return fns
 }
 
 // subcommands returns a map of (visible) child subcommands for cmd.
@@ -316,26 +304,6 @@ func parents(cmd command) []command {
 	return parents
 }
 
-// flagsetPrinter is a flagset (either [flag.FlagSet] or [getopt.PosixFlagSet]) which can render its usage.
-type flagsetPrinter interface {
-	PrintDefaults()
-	Output() io.Writer
-	SetOutput(io.Writer)
-}
-
-// flagUsage returns the text rendered by either [flag.FlagSet.PrintDefaults] or [getopt.PosixFlagSet.PrintDefaults].
-func flagsetUsage(fs flagsetPrinter) string {
-	var buf bytes.Buffer
-
-	original := fs.Output()
-	defer fs.SetOutput(original)
-
-	fs.SetOutput(&buf)
-	fs.PrintDefaults()
-
-	return buf.String()
-}
-
 // flagsetVisitor is a flagset (either [flag.FlagSet] or [getopt.PosixFlagSet]) which be iterated.
 type flagsetVisitor interface {
 	VisitAll(func(*flag.Flag))
@@ -352,10 +320,4 @@ func flagsetGroup(fs flagsetVisitor) map[string][]*flag.Flag {
 	})
 
 	return internal.GroupFlags(flags)
-}
-
-// flagUnquote calls [flag.UnquoteUsage] and returns the result as a slice.
-func flagUnquote(flg *flag.Flag) []string {
-	name, usage := flag.UnquoteUsage(flg)
-	return []string{name, usage}
 }
