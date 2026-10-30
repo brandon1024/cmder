@@ -4,12 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"os"
-	"regexp"
-	"strings"
-
-	"github.com/brandon1024/cmder/getopt"
 )
 
 // ErrIllegalCommandConfiguration is an error returned when a [Command] provided to [Execute] is illegal.
@@ -18,6 +13,17 @@ var ErrIllegalCommandConfiguration = errors.New("cmder: illegal command configur
 // ErrEnvironmentBindFailure is an error returned when [Execute] failed to update a flag value from environment
 // variables (see [WithEnvironmentBinding]).
 var ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from environment variable")
+
+// An internal representation of a command or subcommand and it's state before execution.
+type command struct {
+	Command
+
+	parents   []command
+	fs        *flag.FlagSet
+	args      []string
+	showUsage bool
+	showHelp  bool
+}
 
 // Execute runs a [Command].
 //
@@ -142,17 +148,6 @@ func execute(ctx context.Context, stack []command, ops *ExecuteOptions) error {
 	return nil
 }
 
-// An internal representation of a command or subcommand and it's state before execution.
-type command struct {
-	Command
-
-	parents   []command
-	fs        *flag.FlagSet
-	args      []string
-	showUsage bool
-	showHelp  bool
-}
-
 // onInit calls the [Initializer] init routine if present on c.
 func (c command) onInit(ctx context.Context, ops *ExecuteOptions) error {
 	var err error
@@ -251,12 +246,12 @@ func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 
 		// bind environment variables
 		if ops.bindEnv {
-			if err := bindEnvironmentFlags(stack, this, ops); err != nil {
+			if err := this.bindEnvironmentFlags(ops); err != nil {
 				return nil, err
 			}
 		}
 
-		this.args, err = parseArgs(this, args, ops)
+		this.args, err = this.parseArgs(args, ops)
 		if err != nil {
 			return nil, err
 		}
@@ -279,87 +274,4 @@ func buildCallStack(cmd Command, ops *ExecuteOptions) ([]command, error) {
 	}
 
 	return stack, nil
-}
-
-// parseArgs processes args for the given command, returning the unparsed (remaining) arguments.
-func parseArgs(cmd command, args []string, ops *ExecuteOptions) ([]string, error) {
-	var fp flagParser = &getopt.PosixFlagSet{
-		FlagSet:        cmd.fs,
-		RelaxedParsing: ops.relaxedFlags,
-		Usage:          func() {},
-	}
-
-	if ops.nativeFlags {
-		fp = cmd.fs
-	}
-
-	// interspersed args only possible for leaf commands
-	interspersed := ops.interspersed
-	if len(collectSubcommands(cmd.Command)) > 0 {
-		interspersed = false
-	}
-
-	var processed []string
-
-	for len(args) > 0 {
-		if err := fp.Parse(args); err != nil {
-			return nil, err
-		}
-
-		args = fp.Args()
-
-		if !interspersed {
-			return args, nil
-		}
-
-		if len(args) > 0 {
-			processed = append(processed, args[0])
-			args = args[1:]
-		}
-	}
-
-	return processed, nil
-}
-
-// bindEnvironmentFlags sets flag values from matching environment variables.
-func bindEnvironmentFlags(stack []command, cmd command, ops *ExecuteOptions) error {
-	var components []string
-
-	for _, c := range stack {
-		components = append(components, c.Name())
-	}
-
-	components = append(components, cmd.Name())
-
-	var flags []*flag.Flag
-	cmd.fs.VisitAll(func(f *flag.Flag) {
-		flags = append(flags, f)
-	})
-
-	for _, flag := range flags {
-		variable := ops.bindEnvPrefix + formatEnvvar(append(components, flag.Name))
-
-		if value, ok := os.LookupEnv(variable); ok {
-			if err := flag.Value.Set(value); err != nil {
-				return errors.Join(
-					ErrEnvironmentBindFailure,
-					fmt.Errorf("cmder: failed to set flag %s from variable %s", flag.Name, variable),
-					err,
-				)
-			}
-		}
-	}
-
-	return nil
-}
-
-// formatEnvvar generates an environment variable name which maps to the given flag path.
-func formatEnvvar(flagPath []string) string {
-	reg := regexp.MustCompile("[^a-zA-Z0-9]+")
-
-	for i, v := range flagPath {
-		flagPath[i] = strings.ToUpper(reg.ReplaceAllString(v, ""))
-	}
-
-	return strings.Join(flagPath, "_")
 }

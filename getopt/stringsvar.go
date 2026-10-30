@@ -54,6 +54,10 @@ func (s *StringsVar) Set(value string) error {
 	if err != nil {
 		return fmt.Errorf("getopt: malformed string slice value: %s", value)
 	}
+	if len(values) == 0 {
+		// csv reader discards empty string, which may occur if arg is blank; inject empty string
+		values = [][]string{{""}}
+	}
 	if len(values) != 1 {
 		return fmt.Errorf("getopt: malformed string slice value: %s", value)
 	}
