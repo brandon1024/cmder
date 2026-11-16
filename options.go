@@ -1,6 +1,9 @@
 package cmder
 
-import "io"
+import (
+	"flag"
+	"io"
+)
 
 // ExecuteOptions configure the behavior of [Execute].
 type ExecuteOptions struct {
@@ -8,7 +11,7 @@ type ExecuteOptions struct {
 	nativeFlags   bool
 	relaxedFlags  bool
 	bindEnv       bool
-	bindEnvPrefix string
+	bindEnvMapper func([]Command, Command, *flag.Flag) (string, bool)
 	interspersed  bool
 
 	usageTemplate      string
@@ -59,25 +62,26 @@ func WithRelaxedFlagParsing() ExecuteOption {
 //	git log --format=oneline   ->   GIT_LOG_FORMAT=oneline
 //	git log --no-abbrev-commit ->   GIT_LOG_NOABBREVCOMMIT=true
 //
-// See also [WithPrefixedEnvironmentBinding].
+// For greater control, see [WithCustomEnvironmentBinding].
 func WithEnvironmentBinding() ExecuteOption {
 	return func(ops *ExecuteOptions) {
 		ops.bindEnv = true
-		ops.bindEnvPrefix = ""
+		ops.bindEnvMapper = defaultEnvironmentMapper
 	}
 }
 
-// WithPrefixedEnvironmentBinding is like [WithEnvironmentBinding] but with a variable name prefix.
+// WithCustomEnvironmentBinding is like [WithEnvironmentBinding] but with a user-defined mapping function for mapping
+// command flags to environment variable names.
 //
-//	<PREFIX>COMMAND_FLAGNAME
-//	<PREFIX>COMMAND_SUBCOMMAND_FLAGNAME
-//	<PREFIX>COMMAND_SUBCOMMAND_SUBCOMMAND_FLAGNAME
+// The mapping function accepts a slice of parent commands (nil if the command has no parents), the command itself, and
+// a flag. The mapper must return a valid environment variable name. If the mapping function returns false, environment
+// variable binding is disabled for the flag.
 //
 // See also [WithEnvironmentBinding].
-func WithPrefixedEnvironmentBinding(prefix string) ExecuteOption {
+func WithCustomEnvironmentBinding(mapper func([]Command, Command, *flag.Flag) (string, bool)) ExecuteOption {
 	return func(ops *ExecuteOptions) {
 		ops.bindEnv = true
-		ops.bindEnvPrefix = prefix
+		ops.bindEnvMapper = mapper
 	}
 }
 
