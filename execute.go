@@ -96,6 +96,7 @@ func Execute(ctx context.Context, cmd Command, op ...ExecuteOption) error {
 		helpTemplate:       DefaultHelpTemplate,
 		secondaryTemplates: make(map[string]string),
 		outputWriter:       os.Stdout,
+		bindEnvMapper:      defaultEnvironmentMapper,
 	}
 	for _, f := range op {
 		f(ops)

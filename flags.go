@@ -70,34 +70,47 @@ func (c command) parseArgs(args []string, ops *ExecuteOptions) ([]string, error)
 
 // bindEnvironmentFlags sets flag values from matching environment variables.
 func (c command) bindEnvironmentFlags(ops *ExecuteOptions) error {
+	var parents []Command
+	for _, parent := range c.parents {
+		parents = append(parents, parent)
+	}
+
+	mapping := make(map[string]*flag.Flag)
+	c.fs.VisitAll(func(f *flag.Flag) {
+		if variable, ok := ops.bindEnvMapper(parents, c, f); ok {
+			mapping[variable] = f
+		}
+	})
+
+	for variable, flag := range mapping {
+		value, ok := os.LookupEnv(variable)
+		if !ok {
+			continue
+		}
+
+		if err := flag.Value.Set(value); err != nil {
+			return errors.Join(
+				ErrEnvironmentBindFailure,
+				fmt.Errorf("cmder: failed to set flag %s from variable %s", flag.Name, variable),
+				err,
+			)
+		}
+	}
+
+	return nil
+}
+
+// defaultEnvironmentMapper maps the given command flag to an valid environment variable name.
+func defaultEnvironmentMapper(parents []Command, c Command, f *flag.Flag) (string, bool) {
 	var components []string
 
-	for _, parent := range c.parents {
+	for _, parent := range parents {
 		components = append(components, parent.Name())
 	}
 
 	components = append(components, c.Name())
 
-	var flags []*flag.Flag
-	c.fs.VisitAll(func(f *flag.Flag) {
-		flags = append(flags, f)
-	})
-
-	for _, flag := range flags {
-		variable := ops.bindEnvPrefix + formatEnvvar(append(components, flag.Name))
-
-		if value, ok := os.LookupEnv(variable); ok {
-			if err := flag.Value.Set(value); err != nil {
-				return errors.Join(
-					ErrEnvironmentBindFailure,
-					fmt.Errorf("cmder: failed to set flag %s from variable %s", flag.Name, variable),
-					err,
-				)
-			}
-		}
-	}
-
-	return nil
+	return formatEnvvar(append(components, f.Name)), true
 }
 
 // formatEnvvar generates an environment variable name which maps to the given flag path.

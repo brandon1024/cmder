@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/brandon1024/cmder"
@@ -29,6 +31,45 @@ func ExampleWithEnvironmentBinding() {
 	// format: pretty
 	// page-count: 20
 	// since: 2m0s
+}
+
+func ExampleWithCustomEnvironmentBinding() {
+	os.Setenv("BIND_ENV__SHOW__FORMAT", "overridden-by-flag")
+	os.Setenv("BIND_ENV__SHOW__PAGE_COUNT", "20")
+	os.Setenv("BIND_ENV__SHOW__SINCE", "2m")
+
+	args := []string{"show", "--format=pretty"}
+
+	ops := []cmder.ExecuteOption{
+		cmder.WithArgs(args),
+		cmder.WithCustomEnvironmentBinding(mapper),
+	}
+
+	if err := cmder.Execute(context.Background(), GetCommand(), ops...); err != nil {
+		fmt.Printf("unexpected error occurred: %v", err)
+	}
+	// Output:
+	// format: pretty
+	// page-count: 20
+	// since: 2m0s
+}
+
+func mapper(parents []cmder.Command, c cmder.Command, f *flag.Flag) (string, bool) {
+	var names []string
+
+	for _, parent := range parents {
+		names = append(names, parent.Name())
+	}
+
+	names = append(names, c.Name(), f.Name)
+
+	reg := regexp.MustCompile("[^a-zA-Z0-9]+")
+
+	for i, v := range names {
+		names[i] = strings.ToUpper(reg.ReplaceAllString(v, "_"))
+	}
+
+	return strings.Join(names, "__"), true
 }
 
 const BindEnvHelpText = `
