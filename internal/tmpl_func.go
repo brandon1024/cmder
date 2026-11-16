@@ -77,7 +77,7 @@ func unquote(flg *flag.Flag) []string {
 // zero checks if the default value of flg is the zero value for its type. This is used when rendering usage text
 // to render default flag values only when the default value is interesting.
 //
-// This function expects that flg adhere's to the same requirements of the stdlib [flag] package, notably:
+// This function expects that flg adheres to the same requirements of the stdlib [flag] package, notably:
 //
 //	The flag package may call the String method with a zero-valued receiver, such as a nil pointer.
 //

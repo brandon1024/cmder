@@ -27,7 +27,7 @@ type HiddenVar struct {
 func Hide(fs *flag.FlagSet, name string) {
 	flg := fs.Lookup(name)
 	if flg == nil {
-		panic(fmt.Sprintf("cmder: cannot hide flag '%s': flag '%s' does not exist in flag set", name, name))
+		panic(fmt.Sprintf("getopt: cannot hide flag '%s': flag does not exist in flag set", name))
 	}
 
 	flg.Value = &HiddenVar{flg.Value}

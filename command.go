@@ -45,8 +45,10 @@ type Runnable interface {
 //
 // See [Execute] for more details on the lifecycle of command execution.
 type Initializer interface {
-	// Initialize carries out any initialization needed for this [Command]. Errors returned by Initialize will abort
-	// execution of the command lifecycle (Run()/Destroy() of this command and parent command(s)).
+	// Initialize carries out any initialization needed for this [Command].
+	//
+	// By default, an error returned by Initialize abruptly aborts command execution. Execution behaviour may be
+	// adjusted with the [WithDestroyOnError] option, allowing parent Destroy routines to run as the error propagates.
 	Initialize(context.Context, []string) error
 }
 
@@ -54,8 +56,10 @@ type Initializer interface {
 //
 // See [Execute] for more details on the lifecycle of command execution.
 type Destroyer interface {
-	// Destroy carries out any teardown needed for this [Command]. Errors returned by Destroy will abort execution of
-	// the command lifecycle (Destroy of this command and parent command(s)).
+	// Destroy carries out any teardown needed for this [Command].
+	//
+	// By default, an error returned by Destroy abruptly aborts command execution. Execution behaviour may be
+	// adjusted with the [WithDestroyOnError] option, allowing parent Destroy routines to run as the error propagates.
 	Destroy(context.Context, []string) error
 }
 
@@ -170,7 +174,7 @@ func (d CommandDocumentation) ExampleText() string {
 	return d.Examples
 }
 
-// Hidden returns [CommandDocumentation] Hidden.
+// Hidden returns [CommandDocumentation] IsHidden.
 //
 // See [HiddenCommand].
 func (d CommandDocumentation) Hidden() bool {

@@ -2,6 +2,7 @@ package cmder
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"net/http"
 	"testing"
@@ -187,6 +188,75 @@ func TestExecute(t *testing.T) {
 
 			err := Execute(t.Context(), cmd, WithArgs([]string{"-h"}))
 			tutil.Assert(t, tutil.IsErr(err, ErrShowUsage))
+		})
+	})
+
+	t.Run("destroyer", func(t *testing.T) {
+		var (
+			errL2RunError     = errors.New("l2 run error")
+			errL2DestroyError = errors.New("l2 destroy error")
+			errL1DestroyError = errors.New("l1 destroy error")
+			errL0DestroyError = errors.New("l0 destroy error")
+		)
+
+		cmd := &BaseCommand{
+			CommandName: "l0",
+			Children: []Command{
+				&BaseCommand{
+					CommandName: "l1",
+					Children: []Command{
+						&BaseCommand{
+							CommandName: "l2",
+							RunFunc: func(ctx context.Context, args []string) error {
+								return errL2RunError
+							},
+							DestroyFunc: func(ctx context.Context, args []string) error {
+								return errL2DestroyError
+							},
+						},
+					},
+					DestroyFunc: func(ctx context.Context, args []string) error {
+						return errL1DestroyError
+					},
+				},
+			},
+			DestroyFunc: func(ctx context.Context, args []string) error {
+				return errL0DestroyError
+			},
+		}
+
+		t.Run("should not execute destroy on run error by default", func(t *testing.T) {
+			err := Execute(t.Context(), cmd, WithArgs([]string{"l1", "l2"}))
+
+			if !errors.Is(err, errL2RunError) {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if errors.Is(err, errL2DestroyError) {
+				t.Fatalf("destroy hook executed unexpectedly")
+			}
+			if errors.Is(err, errL1DestroyError) {
+				t.Fatalf("destroy hook executed unexpectedly")
+			}
+			if errors.Is(err, errL0DestroyError) {
+				t.Fatalf("destroy hook executed unexpectedly")
+			}
+		})
+
+		t.Run("should execute destroy on run error if exec option enabled", func(t *testing.T) {
+			err := Execute(t.Context(), cmd, WithArgs([]string{"l1", "l2"}), WithDestroyOnError())
+
+			if !errors.Is(err, errL2RunError) {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !errors.Is(err, errL2DestroyError) {
+				t.Fatalf("destroy hook never executed: %v", err)
+			}
+			if !errors.Is(err, errL1DestroyError) {
+				t.Fatalf("destroy hook never executed: %v", err)
+			}
+			if !errors.Is(err, errL0DestroyError) {
+				t.Fatalf("destroy hook never executed: %v", err)
+			}
 		})
 	})
 }

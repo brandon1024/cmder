@@ -65,7 +65,7 @@ func (c *CounterVar[T]) Set(value string) error {
 
 // Get returns the counter value as an integer.
 func (c *CounterVar[T]) Get() any {
-	return c.value
+	return *c.value
 }
 
 // IsBoolFlag marks the flag as being a boolean.
