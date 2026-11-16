@@ -76,7 +76,7 @@ func TestPosixFlagSet(t *testing.T) {
 			}
 		})
 
-		t.Run("should return nil if flag doesn't exist", func(t *testing.T) {
+		t.Run("should not return nil if flag exists", func(t *testing.T) {
 			fs.String("output", "-", "output file")
 
 			if result := fs.Lookup("output"); result == nil {

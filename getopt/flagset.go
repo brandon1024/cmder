@@ -44,7 +44,7 @@ import (
 //
 //	err := fs.Parse(os.Args[1:])
 //
-// One parsed, any remaining (unparsed) arguments can be accessed with [PosixFlagSet.Arg] or [PosixFlagSet.Args].
+// Once parsed, any remaining (unparsed) arguments can be accessed with [PosixFlagSet.Arg] or [PosixFlagSet.Args].
 //
 // # Syntax
 //
@@ -109,7 +109,7 @@ func NewPosixFlagSet(name string, e flag.ErrorHandling) *PosixFlagSet {
 }
 
 // PrintDefaults writes usage information and default values for all flags in the flag set to the output configured by
-// [flag.FlagSet.Init] or [flag.FlagSet.SetOutput].
+// [flag.FlagSet.SetOutput].
 //
 // Unlike [flag.FlagSet.PrintDefaults] in the standard library, this method formats flags using GNU/POSIX conventions,
 // such as '-a' for short options and '--all' for long options.

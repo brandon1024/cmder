@@ -14,7 +14,7 @@ var ErrIllegalCommandConfiguration = errors.New("cmder: illegal command configur
 // variables (see [WithEnvironmentBinding]).
 var ErrEnvironmentBindFailure = errors.New("cmder: failed to update flag from environment variable")
 
-// An internal representation of a command or subcommand and it's state before execution.
+// An internal representation of a command or subcommand and its state before execution.
 type command struct {
 	Command
 
@@ -47,9 +47,12 @@ type command struct {
 //
 // # Error Handling
 //
-// Whenever a lifecycle routine (Initialize(), Run(), Destroy()) returns a non-nil error, execution is aborted
-// immediately and the error is returned at once. For example, returning an error from Run() will prevent execution of
-// Destroy() of the current command and any parents.
+// By default, the first non-nil error returned by a lifecycle routine (Initialize(), Run(), Destroy()) aborts
+// execution immediately; no subsequent lifecycle routine is invoked and the error is returned. For example, an error
+// returned by Run() prevents Destroy() of the current command and of all parents from executing.
+//
+// [WithDestroyOnError] changes this behavior: as the error propagates, Destroy routines still run for every command
+// that completed initialization.
 //
 // Execute may return [ErrIllegalCommandConfiguration] if a command is misconfigured.
 //
@@ -137,16 +140,18 @@ func execute(ctx context.Context, stack []command, ops *ExecuteOptions) error {
 	} else {
 		err = execute(ctx, stack[1:], ops)
 	}
-	if err != nil {
+
+	// if an error occurred and destroy traversal was not requested, return early
+	if !ops.destroyOnError && err != nil {
 		return err
 	}
 
 	// run destroy (if applicable)
-	if err := this.onDestroy(ctx, ops); err != nil {
-		return err
+	if derr := this.onDestroy(ctx, ops); derr != nil {
+		err = errors.Join(err, derr)
 	}
 
-	return nil
+	return err
 }
 
 // onInit calls the [Initializer] init routine if present on c.

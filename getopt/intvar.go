@@ -137,9 +137,9 @@ func (i *IntVar[T]) Set(value string) error {
 	return nil
 }
 
-// Get returns a pointer to the integer value within.
+// Get returns the integer value within.
 func (i *IntVar[T]) Get() any {
-	return i.value
+	return *i.value
 }
 
 func (i *IntVar[T]) parse(value string) (T, error) {
@@ -207,9 +207,9 @@ func (u *UintVar[T]) Set(value string) error {
 	return nil
 }
 
-// Get returns a pointer to the integer value within.
+// Get returns the unsigned integer value within.
 func (u *UintVar[T]) Get() any {
-	return u.value
+	return *u.value
 }
 
 func (u *UintVar[T]) parse(value string) (T, error) {

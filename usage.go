@@ -248,6 +248,7 @@ func render(cmd command, ops *ExecuteOptions, renderTmpl string) error {
 //	  - flagset_usage(fs):       Return the rendered flag usage for the given flagset.
 //	  - flagset_flag_groups(fs): Return a map of visible flags, grouping related flags.
 //	  - flag_unquote(flg):       Return the unquoted flag usage as returned by [flag.Unquote].
+//	  - flag_zero(flg):          Return true if the flag value is the zero value for its type.
 //	string utils:
 //	  - lower(str):             Return string argument in lowercase.
 //	  - upper(str):             Return string argument in uppercase.
@@ -257,6 +258,7 @@ func render(cmd command, ops *ExecuteOptions, renderTmpl string) error {
 //	  - contains(str, other):   Check if a string contains another string
 //	  - trim(str):              Trim all leading and trailing whitespace of str.
 //	  - lines(str):             Split str into a slice of text lines.
+//	  - wrap(str, int):         Break s into lines, trying to maintain consistent line lengths.
 func funcs(ops *ExecuteOptions) template.FuncMap {
 	fns := internal.TemplateFuncs()
 	fns["commands"] = subcommands
@@ -281,7 +283,7 @@ func subcommands(cmd command) map[string]Command {
 }
 
 // flags returns a template func which produces a flagset (either a standard [flag.FlagSet] or [getopt.PosixFlagSet])
-// according to the options defines in ops. Returns nil if the command doesn't implement [FlagInitializer].
+// according to the options defined in ops. Returns nil if the command doesn't implement [FlagInitializer].
 func flagset(ops *ExecuteOptions) func(cmd command) any {
 	return func(cmd command) any {
 		if _, ok := cmd.Command.(FlagInitializer); !ok {

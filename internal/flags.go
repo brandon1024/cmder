@@ -18,9 +18,9 @@ import (
 //
 // The resulting map entries are keyed by the flag group name, which is the longest flag name in the group. The map
 // values are slices of (one or more) flags in the flag group, sorted by flag name length ('-a' before '--all').
-//
-// Hidden flags are excluded from the resulting map.
 func GroupFlags(collected []*flag.Flag) map[string][]*flag.Flag {
+	collected = slices.Clone(collected)
+
 	// sort flags by name length in descending order to ensure that keys in resulting map will use long names first
 	slices.SortFunc(collected, func(a, b *flag.Flag) int {
 		return cmp.Compare(len(b.Name), len(a.Name))

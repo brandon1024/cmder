@@ -49,6 +49,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/brandon1024/cmder"
 )
@@ -81,7 +82,8 @@ func main() {
 	}
 
 	if err := cmder.Execute(context.Background(), cmd); err != nil {
-		fmt.Printf("unexpected error occurred: %v", err)
+		fmt.Printf("unexpected error occurred: %v\n", err)
+		os.Exit(1)
 	}
 }
 ```
@@ -96,8 +98,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"flag"
+	"fmt"
+	"os"
 
 	"github.com/brandon1024/cmder"
 )
@@ -146,7 +149,7 @@ func main() {
 	}
 
 	if err := cmder.Execute(context.Background(), cmd); err != nil {
-		fmt.Printf("unexpected error occurred: %v", err)
+		fmt.Printf("unexpected error occurred: %v\n", err)
 		os.Exit(1)
 	}
 }

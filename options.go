@@ -7,12 +7,13 @@ import (
 
 // ExecuteOptions configure the behavior of [Execute].
 type ExecuteOptions struct {
-	args          []string
-	nativeFlags   bool
-	relaxedFlags  bool
-	bindEnv       bool
-	bindEnvMapper func([]Command, Command, *flag.Flag) (string, bool)
-	interspersed  bool
+	args           []string
+	nativeFlags    bool
+	relaxedFlags   bool
+	bindEnv        bool
+	bindEnvMapper  func([]Command, Command, *flag.Flag) (string, bool)
+	interspersed   bool
+	destroyOnError bool
 
 	usageTemplate      string
 	helpTemplate       string
@@ -145,5 +146,15 @@ func WithNamedTemplate(name, tmpl string) ExecuteOption {
 func WithOutputWriter(output io.Writer) ExecuteOption {
 	return func(ops *ExecuteOptions) {
 		ops.outputWriter = output
+	}
+}
+
+// WithDestroyOnError configures [Execute] to continue running [Destroyer] routines while an error is propagating.
+//
+// By default, the first error returned by a lifecycle routine (Initialize(), Run(), or Destroy()) aborts execution
+// immediately. This option ensures Destroy routines are executed when propagating errors.
+func WithDestroyOnError() ExecuteOption {
+	return func(ops *ExecuteOptions) {
+		ops.destroyOnError = true
 	}
 }
